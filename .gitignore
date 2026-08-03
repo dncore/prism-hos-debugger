@@ -1,0 +1,27 @@
+# Build
+dist/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Dependencies
+node_modules/
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Environment
+.env
+*.log
+
+# Proto generated (rebuild from .proto sources)
+prism/proto/*_pb2.py
+prism/proto/*_pb2_grpc.py
+
+# Frontend build
+webui/dist/
+webui/tsconfig.tsbuildinfo
