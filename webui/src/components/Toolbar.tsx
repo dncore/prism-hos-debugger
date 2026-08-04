@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronDown, Sun, Moon, Trash2, Circle, Play, Loader2, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Search, ChevronDown, Sun, Moon, Trash2, Circle, Play, Loader2, Eye, EyeOff, RefreshCw, Gavel } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Device, AppProcess } from '@/types';
+import { RulesPopover } from './RulesPopover';
 
 interface Props {
   device: Device | null; devices: Device[];
@@ -12,14 +13,18 @@ interface Props {
   capturing: boolean; starting: boolean; requestCount: number; onClear: () => void;
   filter: string; onFilterChange: (v: string) => void;
   theme: string; onToggleTheme: () => void;
+  activeRuleCount: number; onRulesChanged: () => void;
+  toast: (msg: string, type?: string) => void;
 }
 
-export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, onLoadApps, filterSystemApps, onToggleFilterSystem, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme }: Props) {
+export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, onLoadApps, filterSystemApps, onToggleFilterSystem, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme, activeRuleCount, onRulesChanged, toast }: Props) {
   const [devOpen, setDevOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [appQ, setAppQ] = useState('');
   const toolbarRef = useRef<HTMLDivElement>(null);
   const devBtnRef = useRef<HTMLButtonElement>(null);
+  const rulesBtnRef = useRef<HTMLButtonElement>(null);
 
   const isSystemApp = (name: string) => name.includes('com.huawei') || name.includes('com.ohos');
   const baseApps = filterSystemApps ? apps.filter(a => !isSystemApp(a.name)) : apps;
@@ -152,6 +157,29 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
         value={filter} onChange={e => onFilterChange(e.target.value)}
         className="w-44 px-2.5 py-1.5 rounded-md text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
       />
+
+      {/* Rules */}
+      <div className="relative">
+        <button
+          ref={rulesBtnRef}
+          onClick={() => setRulesOpen(!rulesOpen)}
+          className={cn("relative p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground", rulesOpen && 'bg-accent text-foreground')}
+          title="Override Rules"
+        >
+          <Gavel className="w-4 h-4" />
+          {activeRuleCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-primary text-[9px] text-primary-foreground flex items-center justify-center px-0.5">
+              {activeRuleCount}
+            </span>
+          )}
+        </button>
+        <RulesPopover
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          onRulesChanged={onRulesChanged}
+          toast={toast}
+        />
+      </div>
 
       {/* Theme */}
       <button onClick={onToggleTheme} className="p-1.5 rounded hover:bg-accent transition-colors" title="Toggle theme">

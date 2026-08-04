@@ -2,11 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { RequestPanel } from './components/RequestPanel';
 import { DetailPanel } from './components/DetailPanel';
-import { OverridePanel } from './components/OverridePanel';
 import { ResizableSplit } from './components/ResizableSplit';
 import { Toast } from './components/Toast';
 import { api } from './lib/api';
-import type { Device, AppProcess, CapturedRequest, OverrideRule } from './types';
+import type { Device, AppProcess, CapturedRequest } from './types';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('prism-theme') || 'dark');
@@ -20,6 +19,7 @@ export default function App() {
   const [requests, setRequests] = useState<CapturedRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const [activeRuleCount, setActiveRuleCount] = useState(0);
   const [toasts, setToasts] = useState<{id:number;msg:string;type:string}[]>([]);
 
   const toast = useCallback((msg: string, type = 'info') => {
@@ -134,6 +134,13 @@ export default function App() {
     });
   }, []);
 
+  // Sync active rule count for Toolbar badge
+  const refreshRuleCount = useCallback(() => {
+    api.rules().then(rules => setActiveRuleCount(rules.filter((r: any) => r.enabled).length)).catch(() => {});
+  }, []);
+
+  useEffect(() => { refreshRuleCount(); }, [refreshRuleCount]);
+
   const selected = requests.find(r => r.id === selectedId) || null;
   const filtered = filter ? requests.filter(r => r.url.toLowerCase().includes(filter.toLowerCase())) : requests;
 
@@ -149,12 +156,14 @@ export default function App() {
         requestCount={requests.length} onClear={clearRequests}
         filter={filter} onFilterChange={setFilter}
         theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+        activeRuleCount={activeRuleCount}
+        onRulesChanged={refreshRuleCount}
+        toast={toast}
       />
       <ResizableSplit storageKey="prism-split-ratio"
         left={<RequestPanel requests={filtered} selectedId={selectedId} onSelect={setSelectedId} />}
-        right={<DetailPanel request={selected} />}
+        right={<DetailPanel request={selected} toast={toast} onRulesChanged={refreshRuleCount} />}
       />
-      <OverridePanel toast={toast} />
       <Toast toasts={toasts} />
     </div>
   );
