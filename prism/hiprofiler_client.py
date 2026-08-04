@@ -10,9 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import AsyncIterator, List, Optional
+
+# Must be set before importing grpc to suppress fork() warning spam
+# when subprocess (hdc commands) and gRPC threads coexist.
+os.environ.setdefault("GRPC_ENABLE_FORK_SUPPORT", "1")
 
 import grpc
 

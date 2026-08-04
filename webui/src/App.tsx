@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { RequestPanel } from './components/RequestPanel';
 import { DetailPanel } from './components/DetailPanel';
 import { OverridePanel } from './components/OverridePanel';
+import { ResizableSplit } from './components/ResizableSplit';
 import { Toast } from './components/Toast';
 import { api } from './lib/api';
 import type { Device, AppProcess, CapturedRequest, OverrideRule } from './types';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('prism-theme') || 'dark');
+  const [filterSystemApps, setFilterSystemApps] = useState(() => localStorage.getItem('prism-hide-system-apps') !== 'false');
   const [device, setDevice] = useState<Device | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [apps, setApps] = useState<AppProcess[]>([]);
@@ -39,6 +41,8 @@ export default function App() {
     }).catch(() => {});
   }, []);
 
+  const loadingAppsRef = useRef(false);
+
   // Auto-select device (prefer last-used from localStorage)
   useEffect(() => {
     const savedDeviceId = localStorage.getItem('prism-device');
@@ -46,41 +50,28 @@ export default function App() {
       // Filter to physical devices only (exclude emulators with IP:port IDs)
       const physical = ds.filter((d: Device) => !/^\d+\.\d+\.\d+\.\d+:\d+$/.test(d.device_id));
       setDevices(physical);
-      const saved = savedDeviceId ? physical.find(d => d.device_id === savedDeviceId && d.status === 'online') : null;
+      const saved = savedDeviceId ? physical.find((d: Device) => d.device_id === savedDeviceId && d.status === 'online') : null;
       const target = saved || physical.find((d: Device) => d.status === 'online');
       const online = target;
       if (online) {
         setDevice(online);
         await api.selectDevice(online.device_id);
         await loadApps();
-        // Restore last selected app from localStorage
-        const lastApp = localStorage.getItem('prism-last-app');
-        if (lastApp) {
-          try {
-            const parsed = JSON.parse(lastApp);
-            // Wait a tick for apps state to settle, then auto-start
-            setTimeout(async () => {
-              setLoadingApps(true);
-              try {
-                const currentApps = await api.captureApps();
-                setApps(currentApps);
-                // App restored from localStorage — don't auto-start capture.
-                // User can click the app to start when ready.
-              } catch {}
-              setLoadingApps(false);
-            }, 500);
-          } catch {}
-        }
       }
     }).catch(() => {});
   }, []);
 
   // Load apps — explicitly after backend select completes (avoids race)
   const loadApps = useCallback(async () => {
+    if (loadingAppsRef.current) return;
+    loadingAppsRef.current = true;
     setLoadingApps(true);
     try { setApps(await api.captureApps()); }
     catch { setApps([]); }
-    finally { setLoadingApps(false); }
+    finally {
+      setLoadingApps(false);
+      loadingAppsRef.current = false;
+    }
   }, []);
 
   // SSE
@@ -111,8 +102,9 @@ export default function App() {
   const startCapture = async (pid: number) => {
     setStarting(true);
     try {
-      // Always stop first — backend may have a stale session from a previous page load
-      try { await api.captureStop(); } catch {}
+      // Query actual backend state — avoids 409 and stale frontend state
+      const status = await api.captureStatus();
+      if (status.running) await api.captureStop();
       await api.captureStart(pid, 'grpc');
       setCapturing(true);
       toast(`Capturing PID ${pid}`, 'success');
@@ -134,6 +126,14 @@ export default function App() {
     await api.clearRequests();
   };
 
+  const toggleFilterSystem = useCallback(() => {
+    setFilterSystemApps(prev => {
+      const next = !prev;
+      localStorage.setItem('prism-hide-system-apps', String(next));
+      return next;
+    });
+  }, []);
+
   const selected = requests.find(r => r.id === selectedId) || null;
   const filtered = filter ? requests.filter(r => r.url.toLowerCase().includes(filter.toLowerCase())) : requests;
 
@@ -142,15 +142,18 @@ export default function App() {
       <Toolbar
         device={device} devices={devices} onSelectDevice={selectDevice}
         apps={apps} loadingApps={loadingApps} onSelectApp={selectApp}
+        onLoadApps={loadApps}
+        filterSystemApps={filterSystemApps}
+        onToggleFilterSystem={toggleFilterSystem}
         capturing={capturing} starting={starting}
         requestCount={requests.length} onClear={clearRequests}
         filter={filter} onFilterChange={setFilter}
         theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
       />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <RequestPanel requests={filtered} selectedId={selectedId} onSelect={setSelectedId} />
-        <DetailPanel request={selected} />
-      </div>
+      <ResizableSplit storageKey="prism-split-ratio"
+        left={<RequestPanel requests={filtered} selectedId={selectedId} onSelect={setSelectedId} />}
+        right={<DetailPanel request={selected} />}
+      />
       <OverridePanel toast={toast} />
       <Toast toasts={toasts} />
     </div>

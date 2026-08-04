@@ -22,7 +22,7 @@ export function DetailPanel({ request }: Props) {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-background">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-secondary/30 flex-shrink-0">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-secondary/30 flex-shrink-0">
         <span className={cn("text-sm font-semibold flex-1 truncate", request.response_status && request.response_status >= 400 && 'text-red-500')}>
           {request.method} {request.url}
         </span>
@@ -53,8 +53,8 @@ function TabBtn({ name, active, onClick }: { name: Tab; active: boolean; onClick
   return (
     <button
       onClick={onClick}
-      className={cn("px-4 py-1.5 text-xs border-b-2 border-r border-border bg-transparent cursor-pointer transition-colors",
-        active ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
+      className={cn("px-4 py-1.5 text-xs border-r border-border bg-transparent cursor-pointer transition-colors",
+        active ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground')}
     >
       {name.charAt(0).toUpperCase() + name.slice(1)}
     </button>
@@ -161,7 +161,7 @@ function TimingView({ request: r }: { request: CapturedRequest }) {
         return el;
       })}
       {!total && <p className="text-muted-foreground text-xs mt-2">No timing data</p>}
-      <p className="text-muted-foreground text-[11px] mt-4">{r.timestamp} • {r.is_https ? '🔒' : '🔓'} • {r.intercepted ? '⚡Override' : ''}</p>
+      <p className="text-muted-foreground text-[11px] mt-4">{r.timestamp} • {r.is_https ? 'HTTPS' : 'HTTP'} • {r.intercepted ? 'Override' : ''}</p>
     </div>
   );
 }

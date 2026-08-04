@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronDown, Sun, Moon, Trash2, Circle, Play, Loader2 } from 'lucide-react';
+import { Search, ChevronDown, Sun, Moon, Trash2, Circle, Play, Loader2, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Device, AppProcess } from '@/types';
 
@@ -7,19 +7,23 @@ interface Props {
   device: Device | null; devices: Device[];
   onSelectDevice: (d: Device) => void;
   apps: AppProcess[]; loadingApps: boolean; onSelectApp: (a: AppProcess) => void;
+  onLoadApps: () => void;
+  filterSystemApps: boolean; onToggleFilterSystem: () => void;
   capturing: boolean; starting: boolean; requestCount: number; onClear: () => void;
   filter: string; onFilterChange: (v: string) => void;
   theme: string; onToggleTheme: () => void;
 }
 
-export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme }: Props) {
+export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, onLoadApps, filterSystemApps, onToggleFilterSystem, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme }: Props) {
   const [devOpen, setDevOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
   const [appQ, setAppQ] = useState('');
   const toolbarRef = useRef<HTMLDivElement>(null);
   const devBtnRef = useRef<HTMLButtonElement>(null);
 
-  const filtered = appQ ? apps.filter(a => a.name.toLowerCase().includes(appQ.toLowerCase()) || String(a.pid).includes(appQ)) : apps;
+  const isSystemApp = (name: string) => name.includes('com.huawei') || name.includes('com.ohos');
+  const baseApps = filterSystemApps ? apps.filter(a => !isSystemApp(a.name)) : apps;
+  const filtered = appQ ? baseApps.filter(a => a.name.toLowerCase().includes(appQ.toLowerCase()) || String(a.pid).includes(appQ)) : baseApps;
   const deviceOffline = !device || device.status !== 'online';
 
   // Close dropdowns on click outside
@@ -74,7 +78,7 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
             value={appQ}
             disabled={deviceOffline}
             onChange={e => { setAppQ(e.target.value); setAppOpen(true); }}
-            onFocus={() => setAppOpen(true)}
+            onFocus={() => { setAppOpen(true); if (!apps.length && !loadingApps && !deviceOffline) onLoadApps(); }}
             onBlur={() => setTimeout(() => setAppOpen(false), 150)}
             className={cn(
               "w-full pl-7 pr-6 py-1.5 rounded-md text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary",
@@ -101,6 +105,30 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
           </div>
         )}
       </div>
+
+      {/* System app filter toggle */}
+      <button
+        onClick={onToggleFilterSystem}
+        title={filterSystemApps ? 'Showing user apps only (click to show all)' : 'Showing all apps (click to hide system)'}
+        className={cn(
+          "flex items-center gap-1 px-1.5 py-1 rounded text-xs transition-colors border",
+          filterSystemApps
+            ? 'bg-accent text-foreground border-border'
+            : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
+        )}
+      >
+        {filterSystemApps ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+      </button>
+
+      {/* Refresh app list */}
+      <button
+        onClick={() => { if (!deviceOffline) onLoadApps(); }}
+        disabled={deviceOffline || loadingApps}
+        title="Refresh app list"
+        className={cn("p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground", (deviceOffline || loadingApps) && "opacity-30 cursor-not-allowed")}
+      >
+        <RefreshCw className={cn("w-3 h-3", loadingApps && "animate-spin")} />
+      </button>
 
       {/* Status */}
       <div className={cn("flex items-center gap-1 text-xs whitespace-nowrap", starting ? 'text-yellow-500' : capturing ? 'text-green-500' : 'text-muted-foreground')}>

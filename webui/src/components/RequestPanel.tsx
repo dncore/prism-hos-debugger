@@ -15,12 +15,11 @@ const methodColors: Record<string,string> = {
 export function RequestPanel({ requests, selectedId, onSelect }: Props) {
   if (!requests.length) {
     return (
-      <div className="flex flex-col border-r border-border" style={{ width: '45%', minWidth: 280 }}>
-        <div className="flex items-center gap-2 px-2.5 py-1 border-b border-border bg-secondary/30 text-xs text-muted-foreground flex-shrink-0">
+      <div className="flex flex-col h-full">
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-secondary/30 text-xs text-muted-foreground flex-shrink-0">
           <span>Name</span><span className="ml-auto">Time</span><span className="text-right w-[70px]">Waterfall</span>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2">
-          <span className="text-2xl">📡</span>
           <span className="text-sm">Select an app above to begin capture</span>
         </div>
       </div>
@@ -30,8 +29,8 @@ export function RequestPanel({ requests, selectedId, onSelect }: Props) {
   const max = Math.max(...requests.map(r => r.total_duration_ms || 0), 1);
 
   return (
-    <div className="flex flex-col border-r border-border" style={{ width: '45%', minWidth: 280 }}>
-      <div className="flex items-center gap-2 px-2.5 py-1 border-b border-border bg-secondary/30 text-xs text-muted-foreground flex-shrink-0">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-secondary/30 text-xs text-muted-foreground flex-shrink-0">
         <span>Name</span><span className="ml-auto">Time</span><span className="text-right w-[70px]">Waterfall</span>
       </div>
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
