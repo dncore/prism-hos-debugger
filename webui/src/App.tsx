@@ -5,9 +5,11 @@ import { DetailPanel } from './components/DetailPanel';
 import { ResizableSplit } from './components/ResizableSplit';
 import { Toast } from './components/Toast';
 import { api } from './lib/api';
+import { I18nProvider, useI18n } from './lib/i18n';
 import type { Device, AppProcess, CapturedRequest } from './types';
 
-export default function App() {
+function App() {
+  const { t } = useI18n();
   const [theme, setTheme] = useState(() => localStorage.getItem('prism-theme') || 'dark');
   const [filterSystemApps, setFilterSystemApps] = useState(() => localStorage.getItem('prism-hide-system-apps') !== 'false');
   const [device, setDevice] = useState<Device | null>(null);
@@ -90,36 +92,64 @@ export default function App() {
     setApps([]);  // clear immediately so stale list isn't shown
     try {
       const resp = await api.selectDevice(d.device_id);
-      if (!resp.online) toast(`Device ${d.device_id} is offline — apps may be empty`, 'error');
-      else toast(`Connected: ${d.device_id}`, 'success');
-      await loadApps();  // reload only after backend switch completes
+      if (!resp.online) toast(t('device.offline', { id: d.device_id }), 'error');
+      else toast(t('device.connected', { id: d.device_id }), 'success');
+      await loadApps();
     } catch (e: any) {
-      toast('Failed to select device: ' + e.message, 'error');
+      toast(t('device.select_failed', { msg: e.message }), 'error');
       setDevice(null);
     }
   };
 
-  const startCapture = async (pid: number) => {
+  const startCaptureRef = useRef<(pid: number) => Promise<void>>(null!);
+  const lastPidRef = useRef<number | null>(null);
+  const connectingRef = useRef(false);
+
+  const startCapture = useCallback(async (pid: number) => {
     setStarting(true);
     try {
-      // Query actual backend state — avoids 409 and stale frontend state
       const status = await api.captureStatus();
       if (status.running) await api.captureStop();
       await api.captureStart(pid, 'grpc');
       setCapturing(true);
-      toast(`Capturing PID ${pid}`, 'success');
+      lastPidRef.current = pid;
+      toast(t('capture.capturing', { pid }), 'success');
     } catch (e: any) {
       setCapturing(false);
-      toast('Capture failed: ' + e.message, 'error');
+      toast(t('capture.failed', { msg: e.message }), 'error');
     } finally {
       setStarting(false);
+      connectingRef.current = false;
     }
-  };
+  }, [toast]);
+
+  startCaptureRef.current = startCapture;
 
   const selectApp = async (app: AppProcess) => {
     localStorage.setItem('prism-last-app', JSON.stringify({pid: app.pid, name: app.name}));
     await startCapture(app.pid);
   };
+
+  // Poll for PID changes when capturing (handles app redeploy/restart)
+  useEffect(() => {
+    if (!capturing) return;
+    const interval = setInterval(async () => {
+      if (connectingRef.current) return; // skip while reconnecting
+      try {
+        const lastApp = localStorage.getItem('prism-last-app');
+        if (!lastApp) return;
+        const { name } = JSON.parse(lastApp);
+        const apps = await api.captureApps();
+        const current = apps.find((a: AppProcess) => a.name === name);
+        if (current && current.pid !== lastPidRef.current) {
+          connectingRef.current = true;
+          toast(t('capture.reconnecting', { pid: current.pid }), 'info');
+          await startCaptureRef.current(current.pid);
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [capturing, toast]);
 
   const clearRequests = async () => {
     setRequests([]);
@@ -166,5 +196,13 @@ export default function App() {
       />
       <Toast toasts={toasts} />
     </div>
+  );
+}
+
+export default function AppWrapper() {
+  return (
+    <I18nProvider>
+      <App />
+    </I18nProvider>
   );
 }

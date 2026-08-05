@@ -98,17 +98,20 @@ def main() -> None:
 
     _setup_logging(verbose=getattr(args, "verbose", False))
 
-    if args.command == "list-devices":
-        asyncio.run(_cmd_list_devices(verbose=args.verbose))
-    elif args.command == "start":
-        asyncio.run(_cmd_start(args))
-    elif args.command == "stop":
-        asyncio.run(_cmd_stop())
-    elif args.command == "export-har":
-        asyncio.run(_cmd_export_har(args.output))
-    else:
-        parser.print_help()
-        sys.exit(1)
+    try:
+        if args.command == "list-devices":
+            asyncio.run(_cmd_list_devices(verbose=args.verbose))
+        elif args.command == "start":
+            asyncio.run(_cmd_start(args))
+        elif args.command == "stop":
+            asyncio.run(_cmd_stop())
+        elif args.command == "export-har":
+            asyncio.run(_cmd_export_har(args.output))
+        else:
+            parser.print_help()
+            sys.exit(1)
+    except KeyboardInterrupt:
+        pass  # Ctrl+C — suppress traceback
 
 
 # ── Commands ────────────────────────────────────────────────────────
@@ -234,7 +237,11 @@ async def _cmd_start(args) -> None:
         reload=False,
     )
     server = uvicorn.Server(config)
-    await server.serve()
+    try:
+        await server.serve()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        await server.shutdown()
 
 
 async def _cmd_stop() -> None:
