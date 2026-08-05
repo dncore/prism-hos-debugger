@@ -70,7 +70,6 @@ prism uses a **dual-backend** architecture. The primary backend communicates dir
 ### Install
 
 ```bash
-git clone https://github.com/your-org/prism-hos-debugger.git
 cd prism-hos-debugger
 pip install -e ".[dev]"
 cd webui && npm install && npm run build && cd ..
@@ -255,7 +254,6 @@ prism 采用**双后端**架构。主后端通过 gRPC 与设备端 `hiprofilerd
 ### 安装
 
 ```bash
-git clone https://github.com/your-org/prism-hos-debugger.git
 cd prism-hos-debugger
 pip install -e ".[dev]"
 cd webui && npm install && npm run build && cd ..

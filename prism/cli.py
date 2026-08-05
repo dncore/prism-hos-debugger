@@ -98,6 +98,18 @@ def main() -> None:
 
     _setup_logging(verbose=getattr(args, "verbose", False))
 
+    # Verify core dependencies are installed before running commands
+    if args.command in ("start", "list-devices", "stop"):
+        missing = []
+        for mod, pkg in [("grpc", "grpcio"), ("google.protobuf", "protobuf")]:
+            try:
+                __import__(mod)
+            except ImportError:
+                missing.append(f"  pip install {pkg}")
+        if missing:
+            print("Missing dependencies. Run:\n" + "\n".join(missing))
+            sys.exit(1)
+
     try:
         if args.command == "list-devices":
             asyncio.run(_cmd_list_devices(verbose=args.verbose))
