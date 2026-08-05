@@ -65,7 +65,7 @@ class PayloadParser:
         if not payload:
             return None
 
-        # Try ProtoEncoder binary format first (confirmed on real device)
+        # Try ProtoEncoder binary format first
         result = self._parse_protoencoder(payload, tv_sec, tv_nsec,
                                           pid, tid, process_name, thread_name)
         if result is not None:
@@ -87,8 +87,10 @@ class PayloadParser:
         Type 1 = int64 (8 bytes), Type 2 = int32 (4 bytes), Type 3 = string.
         """
         timestamps = []   # 7x int64 in order
-        strings = []      # string fields in order
         status_code = 0   # int32 field
+        req_strings: list[str] = []   # strings before status_code (request)
+        res_strings: list[str] = []   # strings after status_code (response)
+        seen_status = False
 
         pos = 0
         try:
@@ -101,68 +103,72 @@ class PayloadParser:
                     break
 
                 if field_type == 1 and field_len == 8:
-                    # int64 timestamp (microseconds since boot)
                     val = struct.unpack_from("<q", data, pos)[0]
                     timestamps.append(val)
                 elif field_type == 2 and field_len == 4:
-                    # int32 value (responseStatusCode)
                     val = struct.unpack_from("<i", data, pos)[0]
                     status_code = val
+                    seen_status = True
                 elif field_type == 3:
-                    # string
                     val = data[pos:pos + field_len].decode("utf-8", errors="replace")
-                    strings.append(val)
-                # else: unknown type, skip
+                    if seen_status:
+                        res_strings.append(val)
+                    else:
+                        req_strings.append(val)
 
                 pos += field_len
         except (struct.error, UnicodeDecodeError):
             return None
 
-        if not strings:
-            return None  # Not a valid payload
+        if not req_strings and not res_strings:
+            return None
 
-        # Heuristic field mapping: the ProtoEncoder format doesn't use
-        # fixed positions — match by content pattern.
+        # ── Classify request-side strings ──────────────────────
         url = ""
         method_str = "GET"
         req_headers_raw = ""
+        req_body = ""
+
+        http_methods = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "CONNECT"}
+
+        for s in req_strings:
+            if s.startswith("http://") or s.startswith("https://"):
+                if not url:
+                    url = s
+            elif s.strip().upper() in http_methods:
+                method_str = s.strip().upper()
+            elif "\n" in s and ":" in s:
+                req_headers_raw = s
+            elif s.strip():
+                # Non-empty, not URL/method/headers → candidate request body
+                if len(s) > len(req_body) and not s.strip().lstrip('-').isdigit():
+                    req_body = s
+
+        # ── Classify response-side strings ──────────────────────
         res_headers_raw = ""
         res_body = ""
         remote_addr = ""
 
-        # Known HTTP methods
-        http_methods = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "CONNECT"}
-
-        for s in strings:
+        for s in res_strings:
             if s.startswith("http://") or s.startswith("https://"):
-                if not url:
-                    url = s
-                elif url and not s.startswith(url[:30]):
-                    pass  # secondary URL, skip
-            elif s.strip().upper() in http_methods:
-                method_str = s.strip().upper()
+                pass  # responseEffectiveUrl, skip
             elif s.startswith("HTTP/") or ("\n" in s and any(
                 line.strip().startswith(h) for h in ["HTTP/", "Content-", "Transfer-", "Connection:", "Date:", "Server:", "Cache-"]
                 for line in s.split("\n")[:3]
             )):
-                # Response headers — starts with HTTP/ status line
                 if not res_headers_raw or len(s) > len(res_headers_raw):
                     res_headers_raw = s
             elif "\n" in s and ":" in s:
-                # Multi-line headers
                 if "HTTP/" in s[:20]:
                     res_headers_raw = s
-                elif not req_headers_raw:
-                    req_headers_raw = s
-                else:
-                    # Could be response headers without HTTP/ prefix
-                    if len(s) > len(res_headers_raw):
-                        res_headers_raw = s
-            elif len(s) > 20 and ("{" in s or "[" in s):
-                # Looks like JSON/XML body
-                res_body = s
+                elif len(s) > len(res_headers_raw):
+                    res_headers_raw = s
+            elif s.strip():
+                # Non-header string → response body
+                if len(s) > len(res_body):
+                    res_body = s
 
-        # Extract response body from combined header+body if needed
+        # Extract response body from combined header+body
         if res_headers_raw and not res_body:
             parts = res_headers_raw.split("\n\n", 1)
             if len(parts) == 2:
@@ -208,8 +214,8 @@ class PayloadParser:
             method=method,
             scheme="https" if url.startswith("https://") else "http",
             request_headers=req_headers,
-            request_body=None,
-            request_body_size=0,
+            request_body=req_body if req_body else None,
+            request_body_size=len(req_body.encode("utf-8")) if req_body else 0,
             response_status=status_code if status_code > 0 else 0,
             response_headers=res_headers,
             response_body=res_body if res_body else None,
@@ -299,6 +305,7 @@ class PayloadParser:
             return val / 1000.0
 
         req_headers = self._parse_raw_headers(header_resp.get("requestHeader", ""))
+        req_body = header_resp.get("requestBody", "") or original.get("requestBody", "")
         res_headers = self._parse_raw_headers(header_resp.get("responseHeader", ""))
         response_body = header_resp.get("responseBody", "")
 
@@ -313,8 +320,8 @@ class PayloadParser:
             method=method,
             scheme="https" if url.startswith("https://") else "http",
             request_headers=req_headers,
-            request_body=None,
-            request_body_size=0,
+            request_body=req_body if req_body else None,
+            request_body_size=len(req_body.encode("utf-8")) if req_body else 0,
             response_status=status,
             response_headers=res_headers,
             response_body=response_body if response_body else None,

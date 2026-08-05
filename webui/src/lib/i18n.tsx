@@ -88,6 +88,8 @@ const dict: Record<Lang, Record<string, string>> = {
     'payload.label': 'Payload',
     'payload.request_body': 'Request Body',
     'payload.none': 'None',
+    'payload.grpc_unavailable': 'Request body not captured',
+    'payload.grpc_limit': 'The gRPC profiler cannot capture request bodies. This is a limitation of the HarmonyOS profiler protocol — only RCP-based apps with tracing enabled expose request payloads.',
 
     'preview.label': 'Preview',
 
@@ -206,6 +208,8 @@ const dict: Record<Lang, Record<string, string>> = {
     'payload.label': 'Payload',
     'payload.request_body': '请求体',
     'payload.none': '无',
+    'payload.grpc_unavailable': '请求体未被捕获',
+    'payload.grpc_limit': 'gRPC profiler 无法捕获请求体。这是 HarmonyOS profiler 协议的限制 — 只有基于 RCP 并启用 tracing 的应用才能暴露请求负载。',
 
     'preview.label': '预览',
 

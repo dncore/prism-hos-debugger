@@ -467,24 +467,92 @@ function HeadersTable({ headers, label }: { headers: Record<string,string>; labe
   );
 }
 
+function copyAsCurl(r: CapturedRequest) {
+  let cmd = `curl '${r.url}'`;
+  if (r.method !== 'GET') cmd += ` -X ${r.method}`;
+  for (const [k, v] of Object.entries(r.request_headers)) {
+    if (k === 'host' || k === 'content-length') continue;
+    cmd += ` -H '${k}: ${v}'`;
+  }
+  if (r.request_body) cmd += ` -d '${r.request_body}'`;
+  navigator.clipboard.writeText(cmd);
+}
+
 function HeadersView({ request: r }: { request: CapturedRequest }) {
   const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const statusFirst = r.response_status ? String(r.response_status)[0] : '';
+  const statusBg: Record<string,string> = {
+    '2':'bg-emerald-500/15 text-emerald-400',
+    '3':'bg-amber-500/15 text-amber-400',
+    '4':'bg-orange-500/15 text-orange-400',
+    '5':'bg-red-500/15 text-red-400',
+  };
+
   return (
     <div>
+      {/* General */}
+      <p className="text-muted-foreground text-xs mt-1 mb-3 font-semibold">General</p>
+      <table className="w-full border-collapse text-xs">
+        <tbody>
+          <tr className="border-b border-border">
+            <td className="px-2 py-1 text-muted-foreground w-[120px]">Request URL</td>
+            <td className="px-2 py-1 font-mono break-all">{r.url}</td>
+          </tr>
+          <tr className="border-b border-border">
+            <td className="px-2 py-1 text-muted-foreground">Request Method</td>
+            <td className="px-2 py-1 font-mono">{r.method}</td>
+          </tr>
+          <tr className="border-b border-border">
+            <td className="px-2 py-1 text-muted-foreground">Status Code</td>
+            <td className="px-2 py-1">
+              <span className={cn("inline-block rounded px-1 font-mono text-[11px]", statusBg[statusFirst] || 'text-muted-foreground')}>
+                {r.response_status || '---'} {statusText(r.response_status)}
+              </span>
+            </td>
+          </tr>
+          <tr className="border-b border-border">
+            <td className="px-2 py-1 text-muted-foreground">Remote Address</td>
+            <td className="px-2 py-1 font-mono">{r.remote_address || 'unknown'}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Copy as cURL */}
+      <div className="mt-3 mb-2">
+        <button
+          onClick={() => { copyAsCurl(r); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+          className="px-2 py-1 rounded text-[11px] border border-border hover:bg-accent transition-colors"
+        >
+          {copied ? 'Copied!' : 'Copy as cURL'}
+        </button>
+      </div>
+
+      <hr className="border-border my-3" />
+
       <HeadersTable headers={r.request_headers} label={t('headers.request')} />
       <hr className="border-border my-3" />
       <HeadersTable headers={r.response_headers} label={t('headers.response')} />
-      <p className="text-muted-foreground text-[11px] mt-2">{t('headers.remote', { addr: r.remote_address || 'unknown' })}</p>
     </div>
   );
 }
 
 function PayloadView({ request: r }: { request: CapturedRequest }) {
   const { t } = useI18n();
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(r.method);
   return (
     <div>
       <p className="text-muted-foreground text-xs mb-2 font-semibold">{t('payload.request_body')}</p>
-      {r.request_body ? <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md max-h-[calc(100vh-250px)] overflow-y-auto">{r.request_body}</pre> : <p className="text-muted-foreground text-xs">{t('payload.none')}</p>}
+      {r.request_body ? (
+        <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md max-h-[calc(100vh-250px)] overflow-y-auto">{r.request_body}</pre>
+      ) : hasBody ? (
+        <div className="flex items-center gap-1.5 text-amber-400/80 text-xs" title={t('payload.grpc_limit')}>
+          <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>{t('payload.grpc_unavailable')}</span>
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-xs">{t('payload.none')}</p>
+      )}
     </div>
   );
 }

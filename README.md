@@ -109,6 +109,12 @@ Open http://localhost:8900, select a device, pick a target app, and click — HT
 >
 > If you see the profiler session created but zero HTTP events, this is the most common cause.
 
+> ⚠️ **Request Body Capture Limitation**
+>
+> The gRPC profiler cannot capture **POST/PUT/PATCH request bodies** when the app uses `@kit.NetworkKit` (the legacy `@ohos.net.http` API). This API does not expose request payloads to the profiler. Only `@kit.RemoteCommunicationKit` (RCP, API 12+) with `TracingConfiguration.outgoingData: true` supports full request body capture.
+>
+> **What IS captured regardless of HTTP library:** request headers, response headers, response body, timing breakdown (DNS/TCP/TLS/TTFB), and status codes.
+
 > ⚠️ **Boot Order Note**
 >
 > The profiler hooks into the process at the moment you select it in the Web UI. New HTTP connections opened **after** selection are captured. Pre-existing connections (keepalive sockets, connection pools established before hooking) will not appear.
@@ -280,6 +286,12 @@ prism export-har -o session.har  # 导出 HAR 文件
 > ```
 >
 > 如果看到 profiler session 创建成功但零 HTTP 事件，这通常就是原因。
+
+> ⚠️ **请求体捕获限制**
+>
+> gRPC 模式的 profiler **无法捕获 POST/PUT/PATCH 请求体**（当 app 使用 `@kit.NetworkKit` 即旧版 `@ohos.net.http` API 时）。该 API 不向 profiler 暴露请求负载数据。只有使用 `@kit.RemoteCommunicationKit`（RCP，API 12+）并配置 `TracingConfiguration.outgoingData: true` 的应用才能支持完整请求体捕获。
+>
+> **无论使用何种 HTTP 库，以下数据均可捕获：** 请求头、响应头、响应体、耗时分析（DNS/TCP/TLS/TTFB）、状态码。
 
 > ⚠️ **启动顺序说明**
 >
