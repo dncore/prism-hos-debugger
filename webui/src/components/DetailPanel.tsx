@@ -457,7 +457,7 @@ function HeadersTable({ headers, label }: { headers: Record<string,string>; labe
         <tbody>
           {entries.map(([k,v]) => (
             <tr key={k} className="border-b border-border">
-              <td className="px-2 py-1 text-purple-500 font-mono w-[30%] align-top break-all">{k}</td>
+              <td className="px-2 py-1 text-primary font-mono w-[30%] align-top break-all">{k}</td>
               <td className="px-2 py-1 font-mono align-top break-all">{v}</td>
             </tr>
           ))}

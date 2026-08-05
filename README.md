@@ -109,17 +109,11 @@ Open http://localhost:8900, select a device, pick a target app, and click — HT
 >
 > If you see the profiler session created but zero HTTP events, this is the most common cause.
 
-> ⚠️ **CRITICAL: Boot Order Matters**
+> ⚠️ **Boot Order Note**
 >
-> **prism MUST be started BEFORE the target app.** The profiler hooks into the process at creation time — it cannot retroactively attach to already-established network connections.
+> The profiler hooks into the process at the moment you select it in the Web UI. New HTTP connections opened **after** selection are captured. Pre-existing connections (keepalive sockets, connection pools established before hooking) will not appear.
 >
-> **Correct workflow:**
-> 1. Start prism: `prism start`
-> 2. Kill the target app on the device (swipe it away)
-> 3. Re-open the target app → new PID, fresh connections
-> 4. Select the app in the Web UI picker
->
-> **Skipping step 2 means you will see zero captured requests.**
+> **For best results:** kill and restart the app before selecting it, so all connections are fresh.
 
 ## Capture Modes
 
@@ -287,17 +281,11 @@ prism export-har -o session.har  # 导出 HAR 文件
 >
 > 如果看到 profiler session 创建成功但零 HTTP 事件，这通常就是原因。
 
-> ⚠️ **关键：启动顺序**
+> ⚠️ **启动顺序说明**
 >
-> **prism 必须在目标应用之前启动。** Profiler 在进程创建时 hook 网络层 — 无法对已经建立的网络连接进行 retroactive 附加。
+> Profiler 在 Web UI 中选中应用的那一刻 hook 进程。选中**之后**新建的 HTTP 连接会被捕获。已有连接（keepalive、连接池）不会出现。
 >
-> **正确流程：**
-> 1. 启动 prism: `prism start`
-> 2. 在设备上杀掉目标应用（划掉应用）
-> 3. 重新打开目标应用 → 新 PID，全新连接
-> 4. 在 Web UI 选择器中选中应用
->
-> **跳过第 2 步会导致完全抓不到请求。**
+> **最佳实践：** 选中前先杀掉并重启应用，确保所有连接都是新的。
 
 ## 采集模式
 

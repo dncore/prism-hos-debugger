@@ -125,10 +125,10 @@ const dict: Record<Lang, Record<string, string>> = {
 
     'tooltip.title': 'Capture flow',
     'tooltip.step1': 'App must set "profileable": true in AppScope/app.json5',
-    'tooltip.step2': 'Start prism before launching the app',
-    'tooltip.step3': 'Kill & reopen the app on the device',
-    'tooltip.step4': 'Select the app in the picker to begin capture',
-    'tooltip.footer': 'Without profileable, the system blocks the profiler from hooking the process. The app must be killed and restarted after prism starts — existing connections cannot be captured.',
+    'tooltip.step2': 'Start prism, then click the app picker to refresh PIDs',
+    'tooltip.step3': 'Select the target app to begin capture',
+    'tooltip.step4': 'For best results kill & reopen the app before selection',
+    'tooltip.footer': 'Without profileable, the system blocks the profiler. New connections after selection are captured; pre-existing keepalive connections are not.',
 
     'theme.toggle': 'Toggle theme',
   },
@@ -243,10 +243,10 @@ const dict: Record<Lang, Record<string, string>> = {
 
     'tooltip.title': '捕获流程',
     'tooltip.step1': 'App 必须在 AppScope/app.json5 配置 "profileable": true',
-    'tooltip.step2': '先启动 prism，再启动目标应用',
-    'tooltip.step3': '设备上杀掉并重新打开应用',
-    'tooltip.step4': '在 Web UI 选择器中选中应用开始捕获',
-    'tooltip.footer': '没有 profileable 配置，系统会阻止 profiler hook 进程。应用必须在 prism 启动后被杀死并重启 — 已有连接无法被捕获。',
+    'tooltip.step2': '启动 prism，点击 app 选择器刷新 PID 列表',
+    'tooltip.step3': '选择目标应用开始捕获',
+    'tooltip.step4': '最佳实践：选前先杀掉并重启应用',
+    'tooltip.footer': '没有 profileable 则系统阻止 profiler。选择后新建的连接会被捕获；已有的 keepalive 连接不会。',
 
     'theme.toggle': '切换主题',
   },
