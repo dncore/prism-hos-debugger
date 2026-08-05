@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 import { api } from '@/lib/api';
 import type { CapturedRequest, OverrideRule } from '@/types';
 
@@ -27,17 +28,29 @@ const TYPE_COLORS: Record<string, string> = {
   latency: 'bg-purple-500/10 text-purple-500',
 };
 
+const TAB_KEYS: Tab[] = ['headers', 'payload', 'preview', 'response', 'timing', 'override'];
+
 export function DetailPanel({ request, toast, onRulesChanged }: Props) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<Tab>('headers');
+
+  const labelMap: Record<Tab, string> = {
+    headers: t('tab.headers'),
+    payload: t('tab.payload'),
+    preview: t('tab.preview'),
+    response: t('tab.response'),
+    timing: t('tab.timing'),
+    override: t('tab.override'),
+  };
 
   if (!request) {
     return (
       <div className="h-full flex flex-col min-w-0 bg-background">
         <div className="flex border-b border-border bg-secondary/30">
-          {TABS.map(t => <TabBtn key={t} name={t} active={false} onClick={() => {}} />)}
+          {TAB_KEYS.map(k => <TabBtn key={k} label={labelMap[k]} active={false} onClick={() => {}} />)}
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-          <span className="text-sm">Select a request</span>
+          <span className="text-sm">{t('detail.select')}</span>
         </div>
       </div>
     );
@@ -53,11 +66,11 @@ export function DetailPanel({ request, toast, onRulesChanged }: Props) {
           {request.response_status || '---'} {statusText(request.response_status)}
         </span>
         {request.intercepted && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-medium">OVERRIDE</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-medium">{t('detail.override_tag')}</span>
         )}
       </div>
       <div className="flex border-b border-border bg-secondary/30">
-        {TABS.map(t => <TabBtn key={t} name={t} active={tab === t} onClick={() => setTab(t)} />)}
+        {TAB_KEYS.map(k => <TabBtn key={k} label={labelMap[k]} active={tab === k} onClick={() => setTab(k)} />)}
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         {tab === 'headers' && <HeadersView request={request} />}
@@ -73,16 +86,14 @@ export function DetailPanel({ request, toast, onRulesChanged }: Props) {
   );
 }
 
-const TABS: Tab[] = ['headers', 'payload', 'preview', 'response', 'timing', 'override'];
-
-function TabBtn({ name, active, onClick }: { name: Tab; active: boolean; onClick: () => void }) {
+function TabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       className={cn("px-4 py-1.5 text-xs border-r border-border bg-transparent cursor-pointer transition-colors",
         active ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground')}
     >
-      {name.charAt(0).toUpperCase() + name.slice(1)}
+      {label}
     </button>
   );
 }
@@ -98,10 +109,11 @@ function OverrideTab({
   toast?: (msg: string, type?: string) => void;
   onRulesChanged?: () => void;
 }) {
+  const { t } = useI18n();
   const [rules, setRules] = useState<OverrideRule[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newType, setNewType] = useState<string | null>(null);
-  const t = (msg: string, type = 'info') => toast?.(msg, type);
+  const msg = (msg: string, type = 'info') => toast?.(msg, type);
 
   const refresh = useCallback(() => {
     api.rules().then(setRules).catch(() => {});
@@ -128,25 +140,32 @@ function OverrideTab({
   const otherRules = rules.filter((r) => !matchingRules.includes(r));
 
   const toggleRule = async (id: string) => {
-    try { await api.toggleRule(id); refresh(); onRulesChanged?.(); } catch (e: any) { t(e.message, 'error'); }
+    try { await api.toggleRule(id); refresh(); onRulesChanged?.(); } catch (e: any) { msg(e.message, 'error'); }
   };
 
   const deleteRule = async (id: string) => {
-    try { await api.deleteRule(id); refresh(); onRulesChanged?.(); t('Deleted', 'info'); } catch (e: any) { t(e.message, 'error'); }
+    try { await api.deleteRule(id); refresh(); onRulesChanged?.(); msg(t('override.deleted'), 'info'); } catch (e: any) { msg(e.message, 'error'); }
   };
 
   const done = () => { setEditingId(null); setNewType(null); refresh(); onRulesChanged?.(); };
 
-  // Derive a sensible URL pattern from the request (strip query string, use path prefix)
   const derivedPattern = request.url.replace(/\?.*$/, '');
+
+  const quickLabels: Record<string, string> = {
+    block: t('override.block'),
+    url_redirect: t('override.redirect'),
+    response_body: t('override.mock_body'),
+    response_status: t('override.status'),
+    latency: t('override.latency'),
+  };
 
   return (
     <div className="space-y-4">
       {/* Quick Override */}
       <div>
-        <p className="text-xs text-muted-foreground mb-2 font-semibold">Quick Override</p>
+        <p className="text-xs text-muted-foreground mb-2 font-semibold">{t('override.quick')}</p>
         <div className="flex flex-wrap gap-1.5">
-          {Object.entries(OVERRIDE_LABELS).map(([k, label]) => (
+          {Object.entries(quickLabels).map(([k, label]) => (
             <button
               key={k}
               className="px-2 py-1 rounded text-[11px] border border-border hover:bg-accent transition-colors"
@@ -164,7 +183,7 @@ function OverrideTab({
             presetPattern={derivedPattern}
             onSave={done}
             onCancel={() => setNewType(null)}
-            toast={t}
+            toast={msg}
           />
         )}
       </div>
@@ -172,15 +191,15 @@ function OverrideTab({
       {/* Matching Rules */}
       <div>
         <p className="text-xs text-muted-foreground mb-2 font-semibold">
-          Matching Rules ({matchingRules.length})
+          {t('override.matching', { n: matchingRules.length })}
         </p>
         {matchingRules.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No rules match this URL</p>
+          <p className="text-xs text-muted-foreground">{t('override.no_match')}</p>
         ) : (
           <div className="space-y-0.5">
             {matchingRules.map((r) =>
               editingId === r.id ? (
-                <RuleEditorInline key={r.id} rule={r} onSave={done} onCancel={() => setEditingId(null)} toast={t} />
+                <RuleEditorInline key={r.id} rule={r} onSave={done} onCancel={() => setEditingId(null)} toast={msg} />
               ) : (
                 <RuleRow
                   key={r.id}
@@ -199,12 +218,12 @@ function OverrideTab({
       {otherRules.length > 0 && (
         <div>
           <p className="text-xs text-muted-foreground mb-2 font-semibold">
-            All Rules ({otherRules.length})
+            {t('override.all', { n: otherRules.length })}
           </p>
           <div className="space-y-0.5">
             {otherRules.map((r) =>
               editingId === r.id ? (
-                <RuleEditorInline key={r.id} rule={r} onSave={done} onCancel={() => setEditingId(null)} toast={t} />
+                <RuleEditorInline key={r.id} rule={r} onSave={done} onCancel={() => setEditingId(null)} toast={msg} />
               ) : (
                 <RuleRow
                   key={r.id}
@@ -249,9 +268,7 @@ function RuleRow({
           )}
         />
       </button>
-      <span
-        className={cn('px-1 py-0.5 rounded text-[10px] flex-shrink-0', TYPE_COLORS[rule.override_type] || 'bg-muted text-muted-foreground')}
-      >
+      <span className={cn('px-1 py-0.5 rounded text-[10px] flex-shrink-0', TYPE_COLORS[rule.override_type] || 'bg-muted text-muted-foreground')}>
         {OVERRIDE_LABELS[rule.override_type] || rule.override_type}
       </span>
       <span className="font-medium truncate flex-1">{rule.name || 'Untitled'}</span>
@@ -281,6 +298,7 @@ function RuleEditorInline({
   onCancel: () => void;
   toast: (msg: string, type?: string) => void;
 }) {
+  const { t } = useI18n();
   const isEdit = !!rule;
   const [name, setName] = useState(rule?.name || '');
   const [otype, setOtype] = useState(presetType || rule?.override_type || 'block');
@@ -291,11 +309,21 @@ function RuleEditorInline({
   const [latency, setLatency] = useState(rule?.latency_ms?.toString() || '');
   const [saving, setSaving] = useState(false);
 
+  const ruleLabels: Record<string, string> = {
+    block: t('rule.block'),
+    url_redirect: t('rule.redirect'),
+    response_body: t('rule.mock_body'),
+    response_status: t('rule.status'),
+    latency: t('rule.latency'),
+    header_modify: t('rule.header_modify'),
+    response_headers: t('rule.response_headers'),
+  };
+
   const save = async () => {
     if (!pattern.trim()) return;
     setSaving(true);
     const d: any = {
-      name: name || (isEdit ? rule!.name : `${OVERRIDE_LABELS[otype] || otype} — ${pattern}`),
+      name: name || (isEdit ? rule!.name : `${ruleLabels[otype] || otype} — ${pattern}`),
       override_type: otype,
       match_type: 'prefix',
       match_pattern: pattern,
@@ -319,7 +347,7 @@ function RuleEditorInline({
   return (
     <div className="p-2 border border-border rounded bg-muted/30 space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">{isEdit ? 'Edit Rule' : 'New Rule'}</span>
+        <span className="text-[11px] text-muted-foreground">{isEdit ? t('override.edit_rule') : t('override.new_rule')}</span>
         <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
@@ -330,27 +358,27 @@ function RuleEditorInline({
         disabled={!!presetType}
         className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
       >
-        {Object.entries(OVERRIDE_LABELS).map(([k, v]) => (
+        {Object.entries(ruleLabels).map(([k, v]) => (
           <option key={k} value={k}>{v}</option>
         ))}
       </select>
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Rule name (auto-generated if empty)"
+        placeholder={t('override.name_placeholder')}
         className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
       />
       <input
         value={pattern}
         onChange={(e) => setPattern(e.target.value)}
-        placeholder="URL pattern (prefix match)"
+        placeholder={t('override.pattern_placeholder')}
         className="w-full px-2 py-1 rounded text-xs border border-border bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary"
       />
       {otype === 'url_redirect' && (
         <input
           value={redirect}
           onChange={(e) => setRedirect(e.target.value)}
-          placeholder="Redirect target URL"
+          placeholder={t('override.redirect_placeholder')}
           className="w-full px-2 py-1 rounded text-xs border border-border bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary"
         />
       )}
@@ -359,14 +387,14 @@ function RuleEditorInline({
           <input
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            placeholder="Status code (default: 200)"
+            placeholder={t('override.status_placeholder')}
             type="number"
             className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Response body (JSON or text)..."
+            placeholder={t('override.body_placeholder')}
             rows={4}
             className="w-full px-2 py-1 rounded text-xs border border-border bg-background font-mono resize-y focus:outline-none focus:ring-1 focus:ring-primary"
           />
@@ -376,7 +404,7 @@ function RuleEditorInline({
         <input
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          placeholder="Status code (e.g. 404)"
+          placeholder={t('override.status_placeholder')}
           type="number"
           className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
         />
@@ -385,7 +413,7 @@ function RuleEditorInline({
         <input
           value={latency}
           onChange={(e) => setLatency(e.target.value)}
-          placeholder="Latency in ms (e.g. 2000)"
+          placeholder={t('override.latency_placeholder')}
           type="number"
           className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
         />
@@ -395,14 +423,14 @@ function RuleEditorInline({
           onClick={onCancel}
           className="px-2 py-1 rounded text-[11px] border border-border hover:bg-accent transition-colors"
         >
-          Cancel
+          {t('override.cancel')}
         </button>
         <button
           onClick={save}
           disabled={saving || !pattern.trim()}
           className="px-2 py-1 rounded text-[11px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+          {saving ? t('override.saving') : isEdit ? t('override.update') : t('override.save')}
         </button>
       </div>
     </div>
@@ -418,8 +446,9 @@ function statusText(c: number | null) {
 }
 
 function HeadersTable({ headers, label }: { headers: Record<string,string>; label: string }) {
+  const { t } = useI18n();
   const entries = Object.entries(headers);
-  if (!entries.length) return <p className="text-muted-foreground text-xs my-3">{label}: (empty)</p>;
+  if (!entries.length) return <p className="text-muted-foreground text-xs my-3">{t('headers.empty', { label })}</p>;
   return (
     <div>
       <p className="text-muted-foreground text-xs my-3 font-semibold">{label}</p>
@@ -439,28 +468,31 @@ function HeadersTable({ headers, label }: { headers: Record<string,string>; labe
 }
 
 function HeadersView({ request: r }: { request: CapturedRequest }) {
+  const { t } = useI18n();
   return (
     <div>
-      <HeadersTable headers={r.request_headers} label="Request Headers" />
+      <HeadersTable headers={r.request_headers} label={t('headers.request')} />
       <hr className="border-border my-3" />
-      <HeadersTable headers={r.response_headers} label="Response Headers" />
-      <p className="text-muted-foreground text-[11px] mt-2">Remote: {r.remote_address || 'unknown'}</p>
+      <HeadersTable headers={r.response_headers} label={t('headers.response')} />
+      <p className="text-muted-foreground text-[11px] mt-2">{t('headers.remote', { addr: r.remote_address || 'unknown' })}</p>
     </div>
   );
 }
 
 function PayloadView({ request: r }: { request: CapturedRequest }) {
+  const { t } = useI18n();
   return (
     <div>
-      <p className="text-muted-foreground text-xs mb-2 font-semibold">Request Body</p>
-      {r.request_body ? <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md max-h-[calc(100vh-250px)] overflow-y-auto">{r.request_body}</pre> : <p className="text-muted-foreground text-xs">None</p>}
+      <p className="text-muted-foreground text-xs mb-2 font-semibold">{t('payload.request_body')}</p>
+      {r.request_body ? <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md max-h-[calc(100vh-250px)] overflow-y-auto">{r.request_body}</pre> : <p className="text-muted-foreground text-xs">{t('payload.none')}</p>}
     </div>
   );
 }
 
 function PreviewView({ request: r }: { request: CapturedRequest }) {
+  const { t } = useI18n();
   const b = r.response_body;
-  if (!b) return <p className="text-muted-foreground text-xs">No response body</p>;
+  if (!b) return <p className="text-muted-foreground text-xs">{t('detail.no_body')}</p>;
   if ((r.content_type || '').includes('json')) {
     try { return <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md">{JSON.stringify(JSON.parse(b), null, 2)}</pre>; } catch {}
   }
@@ -468,12 +500,13 @@ function PreviewView({ request: r }: { request: CapturedRequest }) {
 }
 
 function ResponseView({ request: r }: { request: CapturedRequest }) {
+  const { t } = useI18n();
   return (
     <div>
-      <HeadersTable headers={r.response_headers} label="Response Headers" />
+      <HeadersTable headers={r.response_headers} label={t('headers.response')} />
       {r.response_body && (
         <div>
-          <p className="text-muted-foreground text-xs my-3 font-semibold">Body ({r.response_body_size} bytes)</p>
+          <p className="text-muted-foreground text-xs my-3 font-semibold">{t('response.body_size', { n: r.response_body_size })}</p>
           <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md max-h-[calc(100vh-300px)] overflow-y-auto">{r.response_body}</pre>
         </div>
       )}
@@ -482,14 +515,15 @@ function ResponseView({ request: r }: { request: CapturedRequest }) {
 }
 
 function TimingView({ request: r }: { request: CapturedRequest }) {
+  const { t } = useI18n();
   const total = r.total_duration_ms || 0;
   const max = Math.max(total, 1);
   const segs = [
-    { l: 'DNS', ms: r.dns_duration_ms || 0, c: 'bg-green-600' },
-    { l: 'TCP', ms: r.connect_duration_ms || 0, c: 'bg-orange-500' },
-    { l: 'TLS', ms: r.tls_duration_ms || 0, c: 'bg-purple-500' },
-    { l: 'TTFB', ms: r.ttfb_ms || 0, c: 'bg-emerald-500' },
-    { l: 'Download', ms: Math.max(0, total - (r.ttfb_ms || 0)), c: 'bg-blue-500' },
+    { l: t('timing.dns'), ms: r.dns_duration_ms || 0, c: 'bg-green-600' },
+    { l: t('timing.tcp'), ms: r.connect_duration_ms || 0, c: 'bg-orange-500' },
+    { l: t('timing.tls'), ms: r.tls_duration_ms || 0, c: 'bg-purple-500' },
+    { l: t('timing.ttfb'), ms: r.ttfb_ms || 0, c: 'bg-emerald-500' },
+    { l: t('timing.download'), ms: Math.max(0, total - (r.ttfb_ms || 0)), c: 'bg-blue-500' },
   ];
 
   let left = 0;
@@ -510,8 +544,8 @@ function TimingView({ request: r }: { request: CapturedRequest }) {
         left += w;
         return el;
       })}
-      {!total && <p className="text-muted-foreground text-xs mt-2">No timing data</p>}
-      <p className="text-muted-foreground text-[11px] mt-4">{r.timestamp} • {r.is_https ? 'HTTPS' : 'HTTP'} • {r.intercepted ? 'Override' : ''}</p>
+      {!total && <p className="text-muted-foreground text-xs mt-2">{t('detail.no_timing')}</p>}
+      <p className="text-muted-foreground text-[11px] mt-4">{r.timestamp} · {r.is_https ? 'HTTPS' : 'HTTP'} · {r.intercepted ? t('detail.override') : ''}</p>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 import type { CapturedRequest } from '@/types';
 
 interface Props {
@@ -13,14 +14,16 @@ const methodColors: Record<string,string> = {
 };
 
 export function RequestPanel({ requests, selectedId, onSelect }: Props) {
+  const { t } = useI18n();
+
   if (!requests.length) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-secondary/30 text-xs text-muted-foreground flex-shrink-0">
-          <span>Name</span><span className="ml-auto">Time</span><span className="text-right w-[70px]">Waterfall</span>
+          <span>{t('requests.name')}</span><span className="ml-auto">{t('requests.time')}</span><span className="text-right w-[70px]">{t('requests.waterfall')}</span>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2">
-          <span className="text-sm">Select an app above to begin capture</span>
+          <span className="text-sm">{t('empty.select_app')}</span>
         </div>
       </div>
     );
@@ -31,7 +34,7 @@ export function RequestPanel({ requests, selectedId, onSelect }: Props) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-secondary/30 text-xs text-muted-foreground flex-shrink-0">
-        <span>Name</span><span className="ml-auto">Time</span><span className="text-right w-[70px]">Waterfall</span>
+        <span>{t('requests.name')}</span><span className="ml-auto">{t('requests.time')}</span><span className="text-right w-[70px]">{t('requests.waterfall')}</span>
       </div>
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {requests.map(r => {

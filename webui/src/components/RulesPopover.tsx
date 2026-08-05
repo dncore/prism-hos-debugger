@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 import { api } from '@/lib/api';
 import type { OverrideRule } from '@/types';
 
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
+  const { t } = useI18n();
   const [rules, setRules] = useState<OverrideRule[]>([]);
   const [editing, setEditing] = useState<OverrideRule | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -56,7 +58,7 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
       await api.deleteRule(id);
       refresh();
       onRulesChanged();
-      toast('Rule deleted', 'info');
+      toast(t('override.deleted'), 'info');
     } catch (e: any) {
       toast(e.message, 'error');
     }
@@ -80,22 +82,22 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
         style={{ background: 'hsl(var(--card))' }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-secondary/30">
-          <span className="text-xs font-semibold">Override Rules</span>
+          <span className="text-xs font-semibold">{t('override.title')}</span>
           <button
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
             onClick={() => { setEditing(null); setShowNew(true); }}
           >
-            <Plus className="w-3 h-3" /> New
+            <Plus className="w-3 h-3" /> {t('override.save')}
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
           {rules.length === 0 && !showNew && (
-            <p className="text-muted-foreground text-xs p-2 text-center">No rules yet</p>
+            <p className="text-muted-foreground text-xs p-2 text-center">{t('override.no_rules')}</p>
           )}
 
           {showNew && (
-            <RuleEditorInline
+            <RulesEditorInline
               rule={null}
               onSave={() => { setShowNew(false); refresh(); onRulesChanged(); }}
               onCancel={() => setShowNew(false)}
@@ -105,7 +107,7 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
 
           {rules.map((r) =>
             editing?.id === r.id ? (
-              <RuleEditorInline
+              <RulesEditorInline
                 key={r.id}
                 rule={r}
                 onSave={() => { setEditing(null); refresh(); onRulesChanged(); }}
@@ -161,7 +163,7 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
   );
 }
 
-function RuleEditorInline({
+function RulesEditorInline({
   rule,
   onSave,
   onCancel,
@@ -172,6 +174,7 @@ function RuleEditorInline({
   onCancel: () => void;
   toast: (msg: string, type?: string) => void;
 }) {
+  const { t } = useI18n();
   const isEdit = !!rule;
   const [name, setName] = useState(rule?.name || '');
   const [otype, setOtype] = useState(rule?.override_type || 'block');
@@ -209,7 +212,7 @@ function RuleEditorInline({
   return (
     <div className="p-2 border border-border rounded bg-muted/30 space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">{isEdit ? 'Edit Rule' : 'New Rule'}</span>
+        <span className="text-[11px] text-muted-foreground">{isEdit ? t('override.edit_rule') : t('override.new_rule')}</span>
         <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
           <X className="w-3 h-3" />
         </button>
@@ -226,20 +229,20 @@ function RuleEditorInline({
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Rule name (optional)"
+        placeholder={t('override.name_placeholder')}
         className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
       />
       <input
         value={pattern}
         onChange={(e) => setPattern(e.target.value)}
-        placeholder="URL pattern (prefix match)"
+        placeholder={t('override.pattern_placeholder')}
         className="w-full px-2 py-1 rounded text-xs border border-border bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary"
       />
       {otype === 'url_redirect' && (
         <input
           value={redirect}
           onChange={(e) => setRedirect(e.target.value)}
-          placeholder="Redirect target URL"
+          placeholder={t('override.redirect_placeholder')}
           className="w-full px-2 py-1 rounded text-xs border border-border bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary"
         />
       )}
@@ -248,13 +251,13 @@ function RuleEditorInline({
           <input
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            placeholder="Status code (default: 200)"
+            placeholder={t('override.status_placeholder')}
             className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Response body..."
+            placeholder={t('override.body_placeholder')}
             rows={3}
             className="w-full px-2 py-1 rounded text-xs border border-border bg-background font-mono resize-y focus:outline-none focus:ring-1 focus:ring-primary"
           />
@@ -264,7 +267,7 @@ function RuleEditorInline({
         <input
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          placeholder="Status code (e.g. 404)"
+          placeholder={t('override.status_placeholder')}
           className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
         />
       )}
@@ -272,7 +275,7 @@ function RuleEditorInline({
         <input
           value={latency}
           onChange={(e) => setLatency(e.target.value)}
-          placeholder="Latency in ms (e.g. 2000)"
+          placeholder={t('override.latency_placeholder')}
           className="w-full px-2 py-1 rounded text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
         />
       )}
@@ -281,14 +284,14 @@ function RuleEditorInline({
           onClick={onCancel}
           className="px-2 py-1 rounded text-[11px] border border-border hover:bg-accent transition-colors"
         >
-          Cancel
+          {t('override.cancel')}
         </button>
         <button
           onClick={save}
           disabled={saving || !pattern.trim()}
           className="px-2 py-1 rounded text-[11px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+          {saving ? t('override.saving') : isEdit ? t('override.update') : t('override.save')}
         </button>
       </div>
     </div>
