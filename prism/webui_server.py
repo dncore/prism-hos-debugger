@@ -111,8 +111,11 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
+    if capture_mgr.running:
+        await capture_mgr.stop()
     if proxy_mgr.running:
         await proxy_mgr.stop()
+    await device_mgr.teardown_all_forwards()
     # Close SSE queues
     for q in _sse_queues:
         await q.put(None)  # Sentinel to close
@@ -433,6 +436,25 @@ async def api_capture_stop():
     await capture_mgr.stop()
     await device_mgr.teardown_all_forwards()
     return {"success": True}
+
+
+@app.post("/api/capture/kill-app")
+async def api_kill_app(req: dict):
+    """Kill and optionally restart a process on the device."""
+    pid = req.get("pid")
+    if not pid:
+        raise HTTPException(status_code=400, detail="pid is required")
+    package = req.get("name", "")
+    restart = req.get("restart", False)
+
+    killed = await device_mgr.kill_process(int(pid), package)
+    restarted = False
+    if restart and package:
+        import asyncio
+        await asyncio.sleep(0.8)
+        restarted = await device_mgr.start_app(package)
+
+    return {"success": killed, "pid": pid, "restarted": restarted}
 
 
 @app.get("/api/capture/apps")

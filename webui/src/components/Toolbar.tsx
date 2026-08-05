@@ -23,7 +23,16 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
   const [devOpen, setDevOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [appQ, setAppQ] = useState('');
+  const [appQ, setAppQ] = useState(() => {
+    try {
+      const last = localStorage.getItem('prism-last-app');
+      if (last) {
+        const p = JSON.parse(last);
+        return p.short_name || p.name || '';
+      }
+    } catch {}
+    return '';
+  });
   const toolbarRef = useRef<HTMLDivElement>(null);
   const devBtnRef = useRef<HTMLButtonElement>(null);
   const rulesBtnRef = useRef<HTMLButtonElement>(null);

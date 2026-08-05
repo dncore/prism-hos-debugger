@@ -347,6 +347,33 @@ class DeviceManager:
             return []
         return [line.strip() for line in stdout.split("\n") if line.strip()]
 
+    async def kill_process(self, pid: int, package_name: str = "") -> bool:
+        """Kill a process by PID or package name.
+
+        Tries `aa force-stop <package>` (HarmonyOS) first, falls back to
+        `kill -9 <pid>` (Unix).
+        """
+        if package_name:
+            proc = await self._run_with_device("shell", "aa", "force-stop", package_name)
+            if proc.returncode == 0:
+                return True
+
+        proc = await self._run_with_device("shell", "kill", "-9", str(pid))
+        return proc.returncode == 0
+
+    async def start_app(self, package_name: str) -> bool:
+        """Launch an app by package name. Tries common ability names.
+
+        Uses `aa start -a <ability> -b <bundle>` (HarmonyOS official).
+        """
+        for ability in ("EntryAbility", "MainAbility"):
+            proc = await self._run_with_device(
+                "shell", "aa", "start", "-a", ability, "-b", package_name
+            )
+            if proc.returncode == 0:
+                return True
+        return False
+
     # ── hiprofilerd lifecycle ────────────────────────────────────
 
     async def is_profiler_running(self) -> bool:

@@ -237,11 +237,7 @@ async def _cmd_start(args) -> None:
         reload=False,
     )
     server = uvicorn.Server(config)
-    try:
-        await server.serve()
-    except KeyboardInterrupt:
-        print("\nShutting down...")
-        await server.shutdown()
+    await server.serve()
 
 
 async def _cmd_stop() -> None:

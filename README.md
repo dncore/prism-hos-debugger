@@ -94,6 +94,18 @@ prism export-har -o session.har
 
 Open http://localhost:8900, select a device, pick a target app, and click — HTTP requests appear in real time.
 
+> ⚠️ **CRITICAL: Boot Order Matters**
+>
+> **prism MUST be started BEFORE the target app.** The profiler hooks into the process at creation time — it cannot retroactively attach to already-established network connections (TLS handshakes, connection pools, keep-alive sockets).
+>
+> **Correct workflow:**
+> 1. Start prism: `prism start`
+> 2. Kill the target app on the device (swipe it away, or use the Web UI's auto-prompt)
+> 3. Re-open the target app → new PID, fresh connections
+> 4. Select the app in the Web UI picker
+>
+> If you select an app that's already running, prism will prompt you to kill and restart it. **Skipping this step means you will see zero captured requests.**
+
 ## Capture Modes
 
 ### gRPC Mode (default, recommended)
@@ -244,6 +256,18 @@ prism export-har -o session.har  # 导出 HAR 文件
 ```
 
 打开 http://localhost:8900，选择设备 → 选择目标应用 → 点击开始，HTTP 请求实时显示。
+
+> ⚠️ **关键：启动顺序**
+>
+> **prism 必须在目标应用之前启动。** Profiler 在进程创建时 hook 网络层 — 无法对已经建立的网络连接（TLS 握手、连接池、keep-alive）进行 retroactive 附加。
+>
+> **正确流程：**
+> 1. 启动 prism: `prism start`
+> 2. 在设备上杀掉目标应用（划掉应用，或使用 Web UI 的自动提示）
+> 3. 重新打开目标应用 → 新 PID，全新连接
+> 4. 在 Web UI 选择器中选中应用
+>
+> 如果选中一个已在运行的应用，prism 会弹窗提示你杀掉并重启。**跳过这一步会导致完全抓不到请求。**
 
 ## 采集模式
 
