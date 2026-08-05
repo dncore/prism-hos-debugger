@@ -94,17 +94,32 @@ prism export-har -o session.har
 
 Open http://localhost:8900, select a device, pick a target app, and click — HTTP requests appear in real time.
 
+> ⚠️ **CRITICAL: App Must Be Profilable**
+>
+> **The target app's `AppScope/app.json5` MUST include `"profileable": true`** (HarmonyOS API 24+). Without it, the system blocks all performance analysis tools — including the network-profiler — from attaching to the process. Release-signed apps default to `profileable: false`.
+>
+> ```json5
+> // AppScope/app.json5
+> {
+>   "app": {
+>     "profileable": true   // ← REQUIRED
+>   }
+> }
+> ```
+>
+> If you see the profiler session created but zero HTTP events, this is the most common cause.
+
 > ⚠️ **CRITICAL: Boot Order Matters**
 >
-> **prism MUST be started BEFORE the target app.** The profiler hooks into the process at creation time — it cannot retroactively attach to already-established network connections (TLS handshakes, connection pools, keep-alive sockets).
+> **prism MUST be started BEFORE the target app.** The profiler hooks into the process at creation time — it cannot retroactively attach to already-established network connections.
 >
 > **Correct workflow:**
 > 1. Start prism: `prism start`
-> 2. Kill the target app on the device (swipe it away, or use the Web UI's auto-prompt)
+> 2. Kill the target app on the device (swipe it away)
 > 3. Re-open the target app → new PID, fresh connections
 > 4. Select the app in the Web UI picker
 >
-> If you select an app that's already running, prism will prompt you to kill and restart it. **Skipping this step means you will see zero captured requests.**
+> **Skipping step 2 means you will see zero captured requests.**
 
 ## Capture Modes
 
@@ -257,17 +272,32 @@ prism export-har -o session.har  # 导出 HAR 文件
 
 打开 http://localhost:8900，选择设备 → 选择目标应用 → 点击开始，HTTP 请求实时显示。
 
+> ⚠️ **关键：App 必须可分析（Profilable）**
+>
+> **目标 app 的 `AppScope/app.json5` 必须配置 `"profileable": true`**（HarmonyOS API 24+）。没有这个配置，系统安全策略会阻止所有性能分析工具（包括 network-profiler）接入进程。Release 签名 app 默认为 `false`。
+>
+> ```json5
+> // AppScope/app.json5
+> {
+>   "app": {
+>     "profileable": true   // ← 必须配置
+>   }
+> }
+> ```
+>
+> 如果看到 profiler session 创建成功但零 HTTP 事件，这通常就是原因。
+
 > ⚠️ **关键：启动顺序**
 >
-> **prism 必须在目标应用之前启动。** Profiler 在进程创建时 hook 网络层 — 无法对已经建立的网络连接（TLS 握手、连接池、keep-alive）进行 retroactive 附加。
+> **prism 必须在目标应用之前启动。** Profiler 在进程创建时 hook 网络层 — 无法对已经建立的网络连接进行 retroactive 附加。
 >
 > **正确流程：**
 > 1. 启动 prism: `prism start`
-> 2. 在设备上杀掉目标应用（划掉应用，或使用 Web UI 的自动提示）
+> 2. 在设备上杀掉目标应用（划掉应用）
 > 3. 重新打开目标应用 → 新 PID，全新连接
 > 4. 在 Web UI 选择器中选中应用
 >
-> 如果选中一个已在运行的应用，prism 会弹窗提示你杀掉并重启。**跳过这一步会导致完全抓不到请求。**
+> **跳过第 2 步会导致完全抓不到请求。**
 
 ## 采集模式
 

@@ -22,11 +22,11 @@ const dict: Record<Lang, Record<string, string>> = {
 
     'capture.capturing': 'Capturing PID {pid}',
     'capture.failed': 'Capture failed: {msg}',
-    'capture.restart_title': 'Restart App',
-    'capture.restart_message': 'The app was already running when capture started. Profiler hooks only attach to new connections. Restart the app to capture all traffic?',
-    'capture.restart_confirm': 'Restart App',
+    'capture.restart_title': 'Restart Required',
+    'capture.restart_message': 'The app was already running and profiler hooks only attach to new connections. Kill the app, then manually reopen it on the device?',
+    'capture.restart_confirm': 'Kill App',
     'capture.restart_cancel': 'Skip',
-    'capture.app_killed': 'App restarted — new connections will be captured',
+    'capture.app_killed': 'App killed — reopen it on the device. Waiting for new PID...',
     'capture.kill_failed': 'Failed to kill app: {msg}',
     'capture.initializing': 'Initializing...',
     'capture.listening': 'Listening',
@@ -49,7 +49,7 @@ const dict: Record<Lang, Record<string, string>> = {
 
     'filter.system_on': 'Showing user apps only (click to show all)',
     'filter.system_off': 'Showing all apps (click to hide system)',
-    'filter.filter_urls': 'Filter URLs...',
+    'filter.filter_urls': 'method:GET status:4xx type:json…',
 
     'headers.label': 'Headers',
     'headers.request': 'Request Headers',
@@ -124,10 +124,11 @@ const dict: Record<Lang, Record<string, string>> = {
     'timing.download': 'Download',
 
     'tooltip.title': 'Capture flow',
-    'tooltip.step1': 'Start prism before launching the app',
-    'tooltip.step2': 'In the app picker, kill & restart the target app to get a fresh PID',
-    'tooltip.step3': 'Select the app to begin capture',
-    'tooltip.footer': 'This ensures the profiler hooks all new connections — capturing from an already-running app may miss traffic.',
+    'tooltip.step1': 'App must set "profileable": true in AppScope/app.json5',
+    'tooltip.step2': 'Start prism before launching the app',
+    'tooltip.step3': 'Kill & reopen the app on the device',
+    'tooltip.step4': 'Select the app in the picker to begin capture',
+    'tooltip.footer': 'Without profileable, the system blocks the profiler from hooking the process. The app must be killed and restarted after prism starts — existing connections cannot be captured.',
 
     'theme.toggle': 'Toggle theme',
   },
@@ -139,11 +140,11 @@ const dict: Record<Lang, Record<string, string>> = {
 
     'capture.capturing': '正在捕获 PID {pid}',
     'capture.failed': '捕获失败: {msg}',
-    'capture.restart_title': '重启应用',
-    'capture.restart_message': '应用在捕获启动前已在运行。Profiler hook 只能拦截新建连接。重启应用以捕获全部流量？',
-    'capture.restart_confirm': '重启应用',
+    'capture.restart_title': '需要重启',
+    'capture.restart_message': '应用已在运行，profiler hook 只能拦截新建连接。杀掉应用后在设备上手动重新打开？',
+    'capture.restart_confirm': '杀应用',
     'capture.restart_cancel': '跳过',
-    'capture.app_killed': '应用已重启 — 新连接将被捕获',
+    'capture.app_killed': '应用已杀 — 请在设备上手动重新打开。等待新 PID...',
     'capture.kill_failed': '杀进程失败: {msg}',
     'capture.initializing': '初始化中...',
     'capture.listening': '监听中',
@@ -166,7 +167,7 @@ const dict: Record<Lang, Record<string, string>> = {
 
     'filter.system_on': '仅显示用户应用 (点击显示全部)',
     'filter.system_off': '显示全部应用 (点击隐藏系统)',
-    'filter.filter_urls': '过滤 URL...',
+    'filter.filter_urls': 'method:GET status:4xx -status:200 type:json…',
 
     'headers.label': 'Headers',
     'headers.request': '请求头',
@@ -241,10 +242,11 @@ const dict: Record<Lang, Record<string, string>> = {
     'timing.download': '下载',
 
     'tooltip.title': '捕获流程',
-    'tooltip.step1': '先启动 prism，再启动目标应用',
-    'tooltip.step2': '在应用选择器中，先杀掉并重启目标应用以获得全新 PID',
-    'tooltip.step3': '选中应用开始捕获',
-    'tooltip.footer': '这样可以确保 profiler 能 hook 所有新建连接 — 对已在运行的应用直接捕获可能会遗漏请求。',
+    'tooltip.step1': 'App 必须在 AppScope/app.json5 配置 "profileable": true',
+    'tooltip.step2': '先启动 prism，再启动目标应用',
+    'tooltip.step3': '设备上杀掉并重新打开应用',
+    'tooltip.step4': '在 Web UI 选择器中选中应用开始捕获',
+    'tooltip.footer': '没有 profileable 配置，系统会阻止 profiler hook 进程。应用必须在 prism 启动后被杀死并重启 — 已有连接无法被捕获。',
 
     'theme.toggle': '切换主题',
   },

@@ -141,37 +141,20 @@ class HiProfilerCaptureBackend(AbstractCaptureBackend):
         # Begin background fetch
         self._running = True
         self._fetch_task = asyncio.create_task(self._fetch_loop())
-        logger.info("Profiler session %d active — waiting for HTTP events", self._session_id)
 
     async def _fetch_loop(self) -> None:
         """Background task: stream captured data from hiprofilerd."""
-        logger.info("Fetch loop started for session %d", self._session_id)
-        received_any = False
-        chunk_count = 0
         try:
             async for plugin_data in self._client.fetch_data(self._session_id):
                 if not self._running:
                     break
 
                 if plugin_data.name == "network-profiler" and plugin_data.data:
-                    received_any = True
-                    chunk_count += 1
-                    if chunk_count == 1:
-                        logger.info("First data chunk received (%d bytes)", len(plugin_data.data))
                     await self._process_data(plugin_data.data, plugin_data.tv_sec, plugin_data.tv_nsec)
-
-            logger.info("Fetch loop ended — received %d chunks, %s",
-                        chunk_count,
-                        "no HTTP events captured" if not received_any else "data was processed")
-            if not received_any:
-                logger.warning("Fetch loop ended with no data — app may not be making HTTP requests, "
-                               "or the profiler hook did not attach (try killing and restarting the app)")
         except asyncio.CancelledError:
             pass
         except Exception:
             logger.exception("Error in fetch loop")
-
-    _parse_count = 0
 
     async def _process_data(self, data: bytes, tv_sec: int, tv_nsec: int) -> None:
         """Process raw plugin data into CapturedRequest."""
@@ -181,12 +164,7 @@ class HiProfilerCaptureBackend(AbstractCaptureBackend):
             result = NetworkProfilerResult()
             result.ParseFromString(data)
 
-            parsed = 0
             for event in result.network_event:
-                if self._parse_count == 0:
-                    logger.info("Parsing first profiler event: type=%s payload=%d bytes",
-                                event.type, len(event.payload))
-
                 proc_name = event.process_name.decode("utf-8", errors="replace") if event.process_name else ""
                 thread_name = event.thread_name.decode("utf-8", errors="replace") if event.thread_name else ""
 
@@ -202,50 +180,14 @@ class HiProfilerCaptureBackend(AbstractCaptureBackend):
                 )
 
                 if capture and self._on_request:
-                    parsed += 1
-                    self._parse_count += 1
-                    if self._parse_count == 1:
-                        logger.info("First HTTP request captured: %s %s", capture.method.value, capture.url)
                     try:
                         result = self._on_request(capture)
                         if asyncio.iscoroutine(result):
                             await result
                     except Exception:
                         logger.exception("Error in capture callback")
-                proc_name = event.process_name.decode("utf-8", errors="replace") if event.process_name else ""
-                thread_name = event.thread_name.decode("utf-8", errors="replace") if event.thread_name else ""
-
-                capture = self._parser.parse_event(
-                    payload=event.payload,
-                    event_type=event.type,
-                    tv_sec=event.tv_sec or tv_sec,
-                    tv_nsec=event.tv_nsec or tv_nsec,
-                    pid=event.pid,
-                    tid=event.tid,
-                    process_name=proc_name,
-                    thread_name=thread_name,
-                )
-
-                if capture and self._on_request:
-                    parsed += 1
-                    try:
-                        result = self._on_request(capture)
-                        if asyncio.iscoroutine(result):
-                            await result
-                    except Exception:
-                        logger.exception("Error in capture callback")
-
-            if parsed == 0 and result.network_event:
-                # Dump first event payload for diagnosis
-                first = result.network_event[0]
-                sample = first.payload[:80] if first.payload else b'(empty)'
-                logger.warning(
-                    "Received %d profiler events but parsed 0 — format mismatch. "
-                    "First event: type=%s pid=%d payload_preview=%s",
-                    len(result.network_event), first.type, first.pid, sample
-                )
         except Exception:
-            logger.warning("Failed to parse plugin data (%d bytes) — format may have changed", len(data))
+            logger.debug("Failed to parse plugin data (%d bytes)", len(data))
 
     async def stop(self) -> None:
         """Stop capture and clean up."""

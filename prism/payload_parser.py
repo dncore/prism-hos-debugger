@@ -72,12 +72,8 @@ class PayloadParser:
             return result
 
         # Fallback to JSON
-        result = self._parse_json(payload, tv_sec, tv_nsec,
-                                   pid, tid, process_name, thread_name)
-        if result is None:
-            logger.warning("parse_event failed completely: %d bytes, "
-                           "hex preview: %s", len(payload), payload[:60].hex())
-        return result
+        return self._parse_json(payload, tv_sec, tv_nsec,
+                                pid, tid, process_name, thread_name)
 
     # ── ProtoEncoder binary parser ───────────────────────────────
 
@@ -123,9 +119,6 @@ class PayloadParser:
             return None
 
         if not strings:
-            logger.warning("ProtoEncoder parse failed: got %d timestamps but 0 strings from %d bytes. "
-                           "First 40 bytes: %s",
-                           len(timestamps), len(data), data[:40].hex())
             return None  # Not a valid payload
 
         # Heuristic field mapping: the ProtoEncoder format doesn't use

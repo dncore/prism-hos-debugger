@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown, Sun, Moon, Trash2, Circle, Play, Loader2, Eye, EyeOff, RefreshCw, Gavel, Info, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
+import { QUICK_FILTERS } from '@/lib/filter';
 import type { Device, AppProcess } from '@/types';
 import { RulesPopover } from './RulesPopover';
 
@@ -23,16 +24,7 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
   const [devOpen, setDevOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [appQ, setAppQ] = useState(() => {
-    try {
-      const last = localStorage.getItem('prism-last-app');
-      if (last) {
-        const p = JSON.parse(last);
-        return p.short_name || p.name || '';
-      }
-    } catch {}
-    return '';
-  });
+  const [appQ, setAppQ] = useState('');
   const toolbarRef = useRef<HTMLDivElement>(null);
   const devBtnRef = useRef<HTMLButtonElement>(null);
   const rulesBtnRef = useRef<HTMLButtonElement>(null);
@@ -61,9 +53,10 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
         <div className="absolute top-full left-0 mt-2 z-[200] w-80 p-3 rounded-md border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none text-xs leading-relaxed" style={{background:'hsl(var(--card))'}}>
           <p className="font-semibold mb-1.5">{t('tooltip.title')}</p>
           <ol className="space-y-1 text-muted-foreground list-decimal pl-4">
-            <li>{t('tooltip.step1')}</li>
+            <li className="text-foreground font-medium">{t('tooltip.step1')}</li>
             <li>{t('tooltip.step2')}</li>
             <li>{t('tooltip.step3')}</li>
+            <li>{t('tooltip.step4')}</li>
           </ol>
           <p className="mt-2 text-muted-foreground">{t('tooltip.footer')}</p>
         </div>
@@ -107,7 +100,7 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
             value={appQ}
             disabled={deviceOffline}
             onChange={e => { setAppQ(e.target.value); setAppOpen(true); }}
-            onFocus={() => { setAppOpen(true); if (!apps.length && !loadingApps && !deviceOffline) onLoadApps(); }}
+            onFocus={() => { setAppOpen(true); if (!deviceOffline && !loadingApps) onLoadApps(); }}
             onBlur={() => setTimeout(() => setAppOpen(false), 150)}
             className={cn(
               "w-full pl-7 pr-6 py-1.5 rounded-md text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary",
@@ -176,11 +169,32 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
       <div className="w-px h-5 bg-border" />
 
       {/* Filter */}
-      <input
-        placeholder={t('filter.filter_urls')}
-        value={filter} onChange={e => onFilterChange(e.target.value)}
-        className="w-44 px-2.5 py-1.5 rounded-md text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-      />
+      <div className="flex items-center gap-1">
+        {QUICK_FILTERS.map(qf => {
+          const tokens = filter.split(/\s+/);
+          const active = tokens.includes(qf.query);
+          return (
+            <button
+              key={qf.label}
+              onClick={() => {
+                if (active) onFilterChange(tokens.filter(t => t !== qf.query).join(' '));
+                else onFilterChange((filter + ' ' + qf.query).trim());
+              }}
+              className={cn(
+                "px-1.5 py-0.5 rounded text-[10px] border transition-colors",
+                active ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-primary/50',
+              )}
+            >
+              {qf.label}
+            </button>
+          );
+        })}
+        <input
+          placeholder={t('filter.filter_urls')}
+          value={filter} onChange={e => onFilterChange(e.target.value)}
+          className="w-48 px-2.5 py-1.5 rounded-md text-xs border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
 
       {/* Rules */}
       <div className="relative">

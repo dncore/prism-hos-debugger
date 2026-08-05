@@ -24,7 +24,6 @@ export const api = {
   captureApps:   ()                  => api.get('/api/capture/apps'),
   captureStart:  (pid: number, mode = 'grpc') => api.post('/api/capture/start', { mode, pid }),
   captureStop:   ()                  => api.post('/api/capture/stop'),
-  killApp:       (pid: number, name: string) => api.post('/api/capture/kill-app', { pid, name, restart: true }),
   requests:      (params?: Record<string,string>) => api.get('/api/requests?' + new URLSearchParams(params)),
   getRequest:    (id: string)        => api.get(`/api/requests/${id}`),
   clearRequests: ()                  => api.delete('/api/requests'),

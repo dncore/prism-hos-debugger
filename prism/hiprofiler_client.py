@@ -15,9 +15,10 @@ import sys
 from pathlib import Path
 from typing import AsyncIterator, List, Optional
 
-# Must be set before importing grpc to suppress fork() warning spam
-# when subprocess (hdc commands) and gRPC threads coexist.
+# Suppress gRPC fork() warning spam when hdc subprocess coexists with gRPC threads.
 os.environ.setdefault("GRPC_ENABLE_FORK_SUPPORT", "1")
+# Silence gRPC C++ INFO logs (fork_posix.cc messages).
+os.environ.setdefault("GRPC_VERBOSITY", "ERROR")
 
 import grpc
 

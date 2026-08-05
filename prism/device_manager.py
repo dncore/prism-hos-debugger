@@ -347,33 +347,6 @@ class DeviceManager:
             return []
         return [line.strip() for line in stdout.split("\n") if line.strip()]
 
-    async def kill_process(self, pid: int, package_name: str = "") -> bool:
-        """Kill a process by PID or package name.
-
-        Tries `aa force-stop <package>` (HarmonyOS) first, falls back to
-        `kill -9 <pid>` (Unix).
-        """
-        if package_name:
-            proc = await self._run_with_device("shell", "aa", "force-stop", package_name)
-            if proc.returncode == 0:
-                return True
-
-        proc = await self._run_with_device("shell", "kill", "-9", str(pid))
-        return proc.returncode == 0
-
-    async def start_app(self, package_name: str) -> bool:
-        """Launch an app by package name. Tries common ability names.
-
-        Uses `aa start -a <ability> -b <bundle>` (HarmonyOS official).
-        """
-        for ability in ("EntryAbility", "MainAbility"):
-            proc = await self._run_with_device(
-                "shell", "aa", "start", "-a", ability, "-b", package_name
-            )
-            if proc.returncode == 0:
-                return True
-        return False
-
     # ── hiprofilerd lifecycle ────────────────────────────────────
 
     async def is_profiler_running(self) -> bool:
@@ -446,36 +419,33 @@ class DeviceManager:
                         pass
         return 50051  # Default
 
-    async def get_process_name(self, pid: int) -> str:
-        """Get the process name for a PID.
-
-        Uses `ps -o args` to get the full package name (e.g. cn.damai.hongmeng)
-        instead of `ps -o comm` which truncates to 15 chars and wraps in [brackets].
-        Falls back to comm if args returns empty.
-        """
-        rc, stdout, _ = await self.shell(f"ps -p {pid} -o args=")
-        if rc == 0 and stdout.strip():
-            return stdout.strip()
-        # Fallback to truncated comm name
-        rc, stdout, _ = await self.shell(f"ps -p {pid} -o comm= 2>&1")
-        if rc == 0 and stdout.strip():
-            return stdout.strip().strip("[]")  # remove ps bracket wrapping
-        return ""
-
     async def list_debuggable_apps(self) -> list[dict]:
-        """Get list of debuggable processes with PID, full package name, and short display name."""
-        pids = await self.list_debuggable_processes()
+        """Get list of debuggable processes with PID, full package name, and short display name.
+
+        Uses a single `ps -A` call instead of N+1 `ps -p <pid>` calls.
+        """
+        debuggable_pids = set(await self.list_debuggable_processes())
+
+        # Single batch call: ps -A -o pid=,args= dumps all PIDs with full command lines
+        rc, stdout, _ = await self.shell("ps -A -o pid=,args=")
+        if rc != 0 or not stdout.strip():
+            return []
+
         apps = []
-        for pid_str in pids:
-            if not pid_str.isdigit():
+        for line in stdout.strip().split("\n"):
+            line = line.strip()
+            if not line:
                 continue
-            pid = int(pid_str)
-            full_name = await self.get_process_name(pid)
-            # Derive a short display name: the last component of the package (e.g. "hongmeng" from "cn.damai.hongmeng")
+            parts = line.split(None, 1)
+            if len(parts) < 2 or parts[0] not in debuggable_pids:
+                continue
+            pid = int(parts[0])
+            full_name = parts[1]
             short = full_name.split(".")[-1] if "." in full_name else full_name
             apps.append({
                 "pid": pid,
-                "name": full_name or f"PID:{pid}",
+                "name": full_name,
                 "short_name": short,
             })
+
         return sorted(apps, key=lambda a: a["name"].lower())

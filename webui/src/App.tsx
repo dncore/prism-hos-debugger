@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { RequestPanel } from './components/RequestPanel';
 import { DetailPanel } from './components/DetailPanel';
 import { ResizableSplit } from './components/ResizableSplit';
-import { ConfirmDialog } from './components/ConfirmDialog';
 import { Toast } from './components/Toast';
 import { api } from './lib/api';
 import { I18nProvider, useI18n } from './lib/i18n';
+import { matchRequest, parseFilterQuery } from './lib/filter';
 import type { Device, AppProcess, CapturedRequest } from './types';
 
 function App() {
@@ -21,9 +21,15 @@ function App() {
   const [starting, setStarting] = useState(false);
   const [requests, setRequests] = useState<CapturedRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState(() => localStorage.getItem('prism-filter') || '');
+
+  const filterTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const handleFilterChange = useCallback((v: string) => {
+    setFilter(v);
+    clearTimeout(filterTimerRef.current);
+    filterTimerRef.current = setTimeout(() => localStorage.setItem('prism-filter', v), 300);
+  }, []);
   const [activeRuleCount, setActiveRuleCount] = useState(0);
-  const [restartDialogPid, setRestartDialogPid] = useState<number | null>(null);
   const [toasts, setToasts] = useState<{id:number;msg:string;type:string}[]>([]);
 
   const toast = useCallback((msg: string, type = 'info') => {
@@ -78,7 +84,7 @@ function App() {
     }
   }, []);
 
-  // SSE + polling fallback for request updates
+  // SSE for real-time request updates
   useEffect(() => {
     const es = new EventSource('/api/requests/stream');
     es.addEventListener('request', (e: MessageEvent) => {
@@ -87,27 +93,7 @@ function App() {
         setRequests(prev => [req, ...prev].slice(0, 1000));
       } catch {}
     });
-    es.addEventListener('error', () => {
-      // SSE failed — fall back to polling
-      es.close();
-    });
-    // Also poll every 3s as a safety net
-    const poll = setInterval(async () => {
-      try {
-        const latest = await api.requests({ limit: '50' });
-        if (latest.length) {
-          setRequests(prev => {
-            const ids = new Set(prev.map(r => r.id));
-            const fresh = latest.filter((r: CapturedRequest) => !ids.has(r.id));
-            return fresh.length ? [...fresh.reverse(), ...prev].slice(0, 1000) : prev;
-          });
-        }
-      } catch {}
-    }, 3000);
-    return () => {
-      es.close();
-      clearInterval(poll);
-    };
+    return () => es.close();
   }, []);
 
   const selectDevice = async (d: Device) => {
@@ -149,47 +135,14 @@ function App() {
 
   startCaptureRef.current = startCapture;
 
-  const selectApp = (app: AppProcess) => {
+  const selectApp = async (app: AppProcess) => {
     localStorage.setItem('prism-last-app', JSON.stringify({pid: app.pid, name: app.name, short_name: app.short_name}));
-    setRestartDialogPid(app.pid);
+    await startCapture(app.pid);
   };
 
-  const handleRestartApp = async () => {
-    const pid = restartDialogPid;
-    setRestartDialogPid(null);
-    if (!pid) return;
-    try {
-      const lastApp = localStorage.getItem('prism-last-app');
-      const parsed = lastApp ? JSON.parse(lastApp) : {};
-      const name: string = parsed.name || '';
-      await api.killApp(pid, name);
-      toast(t('capture.app_killed'), 'info');
-      // Wait for the new PID to appear
-      for (let i = 0; i < 15; i++) {
-        await new Promise(r => setTimeout(r, 1000));
-        try {
-          const apps = await api.captureApps();
-          const current = apps.find((a: AppProcess) => a.name === name);
-          if (current && current.pid !== pid) {
-            localStorage.setItem('prism-last-app', JSON.stringify({pid: current.pid, name: current.name, short_name: current.short_name}));
-            await startCapture(current.pid);
-            return;
-          }
-        } catch {}
-      }
-      toast('App did not restart — select it manually', 'warn');
-    } catch (e: any) {
-      toast(t('capture.kill_failed', { msg: e.message }), 'error');
-    }
-  };
-
-  const handleSkipRestart = async () => {
-    const pid = restartDialogPid;
-    setRestartDialogPid(null);
-    if (pid) await startCapture(pid);
-  };
-
-  // Poll for PID changes when capturing (handles app redeploy/restart)
+  // Poll for PID changes when capturing (handles app redeploy/restart).
+  // Only restarts if the current PID has disappeared — not if the app
+  // has multiple processes with the same name (main + service worker).
   useEffect(() => {
     if (!capturing) return;
     const interval = setInterval(async () => {
@@ -199,15 +152,18 @@ function App() {
         if (!lastApp) return;
         const { name } = JSON.parse(lastApp);
         const apps = await api.captureApps();
-        const current = apps.find((a: AppProcess) => a.name === name);
-        if (current && current.pid !== lastPidRef.current) {
-          connectingRef.current = true;
-          localStorage.setItem('prism-last-app', JSON.stringify({pid: current.pid, name: current.name, short_name: current.short_name}));
-          toast(t('capture.reconnecting', { pid: current.pid }), 'info');
-          await startCaptureRef.current(current.pid);
+        const currentPid = lastPidRef.current;
+        if (currentPid && !apps.some((a: AppProcess) => a.name === name && a.pid === currentPid)) {
+          // Current PID disappeared — find any process with this name
+          const current = apps.find((a: AppProcess) => a.name === name);
+          if (current) {
+            connectingRef.current = true;
+            localStorage.setItem('prism-last-app', JSON.stringify({pid: current.pid, name: current.name, short_name: current.short_name}));
+            await startCaptureRef.current(current.pid);
+          }
         }
       } catch {}
-    }, 5000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [capturing, toast]);
 
@@ -231,8 +187,12 @@ function App() {
 
   useEffect(() => { refreshRuleCount(); }, [refreshRuleCount]);
 
-  const selected = requests.find(r => r.id === selectedId) || null;
-  const filtered = filter ? requests.filter(r => r.url.toLowerCase().includes(filter.toLowerCase())) : requests;
+  const filterTokens = useMemo(() => parseFilterQuery(filter), [filter]);
+  const filtered = useMemo(
+    () => filterTokens.length ? requests.filter(r => matchRequest(r, filterTokens)) : requests,
+    [requests, filterTokens],
+  );
+  const selected = useMemo(() => requests.find(r => r.id === selectedId) || null, [requests, selectedId]);
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
@@ -244,7 +204,7 @@ function App() {
         onToggleFilterSystem={toggleFilterSystem}
         capturing={capturing} starting={starting}
         requestCount={requests.length} onClear={clearRequests}
-        filter={filter} onFilterChange={setFilter}
+        filter={filter} onFilterChange={handleFilterChange}
         theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
         activeRuleCount={activeRuleCount}
         onRulesChanged={refreshRuleCount}
@@ -253,15 +213,6 @@ function App() {
       <ResizableSplit storageKey="prism-split-ratio"
         left={<RequestPanel requests={filtered} selectedId={selectedId} onSelect={setSelectedId} />}
         right={<DetailPanel request={selected} toast={toast} onRulesChanged={refreshRuleCount} />}
-      />
-      <ConfirmDialog
-        open={restartDialogPid !== null}
-        title={t('capture.restart_title')}
-        message={t('capture.restart_message')}
-        confirmLabel={t('capture.restart_confirm')}
-        cancelLabel={t('capture.restart_cancel')}
-        onConfirm={handleRestartApp}
-        onCancel={handleSkipRestart}
       />
       <Toast toasts={toasts} />
     </div>
