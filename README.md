@@ -71,7 +71,7 @@ prism uses a **dual-backend** architecture. The primary backend communicates dir
 
 ```bash
 cd prism-hos-debugger
-pip install -e ".[dev]"
+pip install -e ".[dev]" --only-binary=:all:
 cd webui && npm install && npm run build && cd ..
 ```
 
@@ -255,7 +255,7 @@ prism 采用**双后端**架构。主后端通过 gRPC 与设备端 `hiprofilerd
 
 ```bash
 cd prism-hos-debugger
-pip install -e ".[dev]"
+pip install -e ".[dev]" --only-binary=:all:
 cd webui && npm install && npm run build && cd ..
 ```
 
