@@ -85,14 +85,20 @@ class HiProfilerCaptureBackend(AbstractCaptureBackend):
         if not self._device_mgr.selected_device_id:
             raise RuntimeError("No device selected")
 
-        # Start hiprofilerd if not running, or reset if stale
-        ok = await self._device_mgr.start_profiler()
-        if not ok or not await self._device_mgr.is_profiler_running():
-            raise RuntimeError(
-                "hiprofilerd is not available on this device. "
-                "gRPC mode requires a physical HarmonyOS device with hiprofilerd. "
-                "Emulators and some devices do not include the profiler daemon. "
-                "Use proxy mode instead."
+        # Always reset profiler to clear stale session state before creating a new one.
+        # Without this, re-selecting an app (or changing PIDs) leaves the device-side
+        # hiprofilerd in a confused state where sessions are created but produce no data.
+        if await self._device_mgr.is_profiler_running():
+            logger.info("Resetting profiler to clear previous session state")
+            await self._device_mgr.reset_profiler()
+        else:
+            ok = await self._device_mgr.start_profiler()
+            if not ok or not await self._device_mgr.is_profiler_running():
+                raise RuntimeError(
+                    "hiprofilerd is not available on this device. "
+                    "gRPC mode requires a physical HarmonyOS device with hiprofilerd. "
+                    "Emulators and some devices do not include the profiler daemon. "
+                    "Use proxy mode instead."
             )
 
         # Clean any stale forward on this port before setting up
@@ -196,21 +202,29 @@ class HiProfilerCaptureBackend(AbstractCaptureBackend):
         if self._fetch_task:
             self._fetch_task.cancel()
             try:
-                await self._fetch_task
-            except (asyncio.CancelledError, Exception):
+                await asyncio.wait_for(self._fetch_task, timeout=5.0)
+            except (asyncio.TimeoutError, asyncio.CancelledError, Exception):
                 pass
             self._fetch_task = None
 
         if self._client and self._session_id is not None:
             try:
-                await self._client.stop_session(self._session_id)
-                await self._client.destroy_session(self._session_id)
-            except Exception:
-                logger.exception("Error cleaning up profiler session")
+                await asyncio.wait_for(
+                    self._client.stop_session(self._session_id), timeout=5.0
+                )
+                await asyncio.wait_for(
+                    self._client.destroy_session(self._session_id), timeout=5.0
+                )
+            except (asyncio.TimeoutError, Exception):
+                logger.warning("Timed out cleaning up profiler session %d — forcing cleanup",
+                               self._session_id)
             self._session_id = None
 
         if self._client:
-            await self._client.disconnect()
+            try:
+                await asyncio.wait_for(self._client.disconnect(), timeout=5.0)
+            except (asyncio.TimeoutError, Exception):
+                logger.warning("Timed out disconnecting gRPC client")
             self._client = None
 
         # Clean up port forward

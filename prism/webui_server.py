@@ -457,6 +457,83 @@ async def index():
     return HTMLResponse("<h1>prism Web UI not found</h1>", status_code=404)
 
 
+@app.post("/api/debug/reset-profiler")
+async def api_debug_reset_profiler():
+    """Force-restart hiprofilerd and reconnect. Use when session is active but no data flows."""
+    if capture_mgr.running:
+        await capture_mgr.stop()
+    await device_mgr.reset_profiler()
+    return {"success": True, "message": "Profiler reset — re-select the app in Web UI"}
+
+
+@app.get("/api/debug/status")
+async def api_debug_status():
+    """Diagnostic endpoint: full system state for AI/debugger consumption."""
+    import subprocess
+    import datetime
+
+    info: dict = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "device": {
+            "selected_id": device_mgr.selected_device_id,
+            "hdc_available": device_mgr.available,
+            "hdc_bin": device_mgr.hdc_bin,
+        },
+        "capture": {
+            "running": capture_mgr.running,
+            "backend_type": capture_mgr.backend_type,
+            "supports_overrides": capture_mgr.supports_overrides,
+        },
+        "grpc": {
+            "connected": False,
+            "session_id": None,
+            "target_pid": None,
+            "fetch_loop_running": False,
+        },
+        "hdc_test": {},
+    }
+
+    # gRPC backend details
+    if hasattr(capture_mgr, "_grpc_backend"):
+        be = capture_mgr._grpc_backend
+        info["grpc"] = {
+            "connected": be._client is not None and be._client.connected,
+            "session_id": be._session_id,
+            "target_pid": be._target_pid,
+            "fetch_loop_running": be._running and be._fetch_task is not None and not be._fetch_task.done(),
+            "host_port": be._host_port,
+        }
+
+    # hdc connectivity test
+    if device_mgr.available:
+        try:
+            proc = subprocess.run(
+                [device_mgr.hdc_bin, "list", "targets"],
+                capture_output=True, text=True, timeout=10
+            )
+            targets = [t.strip() for t in proc.stdout.strip().split("\n") if t.strip()]
+            info["hdc_test"] = {"targets": targets, "exit_code": proc.returncode}
+        except Exception as e:
+            info["hdc_test"] = {"error": str(e)}
+
+    # Port forward check
+    if device_mgr.selected_device_id:
+        try:
+            proc = subprocess.run(
+                [device_mgr.hdc_bin, "-t", device_mgr.selected_device_id, "fport", "ls"],
+                capture_output=True, text=True, timeout=10
+            )
+            info["port_forward"] = {
+                "stdout": proc.stdout.strip(),
+                "stderr": proc.stderr.strip(),
+                "exit_code": proc.returncode,
+            }
+        except Exception as e:
+            info["port_forward"] = {"error": str(e)}
+
+    return info
+
+
 # Mount static files after explicit routes
 if _STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
