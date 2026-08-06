@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p desktop/resources/prism-backend
           cp packaging/dist/prism desktop/resources/prism-backend/prism
-          cd desktop && npm ci
+          cd desktop && npm install
 
       - name: Package .dmg
         env:
