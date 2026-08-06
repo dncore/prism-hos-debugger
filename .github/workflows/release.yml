@@ -20,7 +20,7 @@ jobs:
 
       - name: Install deps
         run: |
-          pip install -e ".[dev]" --only-binary=:all:
+          pip install -e ".[dev]"
           pip install pyinstaller
           cd webui && npm ci && npm run build && cd ..
 
