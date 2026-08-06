@@ -228,15 +228,9 @@ prism-hos-debugger/
 │   ├── src/lib/            #   API client + utilities
 │   └── dist/               #   Production build
 ├── tests/                  # Python tests (33/33)
-├── docs/                   # Technical documentation
 ├── pyproject.toml
 └── README.md
 ```
-
-## Documentation
-
-- [Technical Notes](docs/dev-notes.md) — Reverse-engineering methodology, hdc commands, platform constraints, protobuf protocol
-- [Proto Reference](docs/proto-reference.md) — gRPC service definitions, session lifecycle, ClockId enum
 
 ## License
 
@@ -400,7 +394,6 @@ prism-hos-debugger/
 │   ├── src/lib/            #   API 客户端 + 工具函数
 │   └── dist/               #   生产构建
 ├── tests/                  # Python 测试（33/33）
-├── docs/                   # 技术文档
 ├── pyproject.toml
 └── README.md
 ```
@@ -422,11 +415,6 @@ prism-hos-debugger/
 | `GET /api/rules` | 列出覆写规则 |
 | `POST /api/rules` | 创建覆写规则 |
 | `PATCH /api/rules/{id}/toggle` | 启用/禁用规则 |
-
-## 技术文档
-
-- [技术笔记](docs/dev-notes.md) — 逆向分析方法、hdc 命令、平台限制、protobuf 协议
-- [Proto 参考](docs/proto-reference.md) — gRPC 服务定义、Session 生命周期、ClockId 枚举
 
 ## 协议
 
