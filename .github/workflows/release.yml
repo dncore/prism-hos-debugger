@@ -28,7 +28,7 @@ jobs:
         run: |
           cd packaging && mkdir -p dist build
           pyinstaller --onefile --distpath dist --workpath build --clean --noconfirm \
-            --name prism --target-arch arm64 --console=false ../prism/cli.py
+            --name prism --target-arch arm64 ../prism/cli.py
 
       - name: Bundle into Electron
         run: |
