@@ -21,6 +21,7 @@ function App() {
   const [starting, setStarting] = useState(false);
   const [requests, setRequests] = useState<CapturedRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [preserveLog, setPreserveLog] = useState(() => localStorage.getItem('prism-preserve-log') === 'true');
   const [filter, setFilter] = useState(() => localStorage.getItem('prism-filter') || '');
 
   const filterTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -123,6 +124,7 @@ function App() {
       await api.captureStart(pid, 'grpc');
       setCapturing(true);
       lastPidRef.current = pid;
+      if (!preserveLog) { setRequests([]); setSelectedId(null); await api.clearRequests(); }
       toast(t('capture.capturing', { pid }), 'success');
     } catch (e: any) {
       setCapturing(false);
@@ -185,6 +187,14 @@ function App() {
     api.rules().then(rules => setActiveRuleCount(rules.filter((r: any) => r.enabled).length)).catch(() => {});
   }, []);
 
+  const togglePreserveLog = useCallback(() => {
+    setPreserveLog(prev => {
+      const next = !prev;
+      localStorage.setItem('prism-preserve-log', String(next));
+      return next;
+    });
+  }, []);
+
   useEffect(() => { refreshRuleCount(); }, [refreshRuleCount]);
 
   const filterTokens = useMemo(() => parseFilterQuery(filter), [filter]);
@@ -208,6 +218,8 @@ function App() {
         theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
         activeRuleCount={activeRuleCount}
         onRulesChanged={refreshRuleCount}
+        preserveLog={preserveLog}
+        onTogglePreserveLog={togglePreserveLog}
         toast={toast}
       />
       <ResizableSplit storageKey="prism-split-ratio"

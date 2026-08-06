@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
@@ -44,12 +44,21 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
   const [rules, setRules] = useState<OverrideRule[]>([]);
   const [editing, setEditing] = useState<OverrideRule | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [flipLeft, setFlipLeft] = useState(false);
+  const popRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(() => {
     api.rules().then(setRules).catch(() => {});
   }, []);
 
   useEffect(() => { if (open) refresh(); }, [open, refresh]);
+
+  useLayoutEffect(() => {
+    if (!open || !popRef.current) return;
+    const rect = popRef.current.getBoundingClientRect();
+    if (rect.right > window.innerWidth - 8) setFlipLeft(true);
+    else if (rect.left < 8) setFlipLeft(false);
+  }, [open]);
 
   if (!open) return null;
 
@@ -78,8 +87,12 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
-        className="absolute top-full right-0 mt-1 z-50 w-80 border border-border rounded-md shadow-lg flex flex-col max-h-80"
-        style={{ background: 'hsl(var(--card))' }}
+        ref={popRef}
+        className={cn(
+          "absolute top-full mt-1 z-50 border border-border rounded-md shadow-lg flex flex-col max-h-80",
+          flipLeft ? 'right-0' : 'left-0',
+        )}
+        style={{ background: 'hsl(var(--card))', width: 'min(20rem, calc(100vw - 2rem))' }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-secondary/30">
           <span className="text-xs font-semibold">{t('override.title')}</span>

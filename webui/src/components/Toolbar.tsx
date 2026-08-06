@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronDown, Sun, Moon, Trash2, Circle, Play, Loader2, Eye, EyeOff, RefreshCw, Gavel, Info, Globe } from 'lucide-react';
+import { Search, ChevronDown, Sun, Moon, Trash2, Circle, Play, Loader2, Eye, EyeOff, RefreshCw, SlidersHorizontal, Info, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 import { QUICK_FILTERS } from '@/lib/filter';
@@ -16,10 +16,11 @@ interface Props {
   filter: string; onFilterChange: (v: string) => void;
   theme: string; onToggleTheme: () => void;
   activeRuleCount: number; onRulesChanged: () => void;
+  preserveLog: boolean; onTogglePreserveLog: () => void;
   toast: (msg: string, type?: string) => void;
 }
 
-export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, onLoadApps, filterSystemApps, onToggleFilterSystem, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme, activeRuleCount, onRulesChanged, toast }: Props) {
+export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, onLoadApps, filterSystemApps, onToggleFilterSystem, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme, activeRuleCount, onRulesChanged, preserveLog, onTogglePreserveLog, toast }: Props) {
   const { t, lang, setLang } = useI18n();
   const [devOpen, setDevOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
@@ -46,7 +47,7 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
   }, []);
 
   return (
-    <div ref={toolbarRef} className="flex items-center gap-2.5 px-3 py-2 border-b border-border flex-shrink-0 min-h-[44px]" style={{background:'hsl(var(--card))'}}>
+    <div ref={toolbarRef} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-1.5 border-b border-border flex-shrink-0 min-h-[44px]" style={{background:'hsl(var(--card))'}}>
       {/* Usage hint */}
       <div className="relative group">
         <Info className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
@@ -63,7 +64,7 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
       </div>
 
       {/* Device selector */}
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <button
           ref={devBtnRef}
           disabled={starting || capturing}
@@ -92,7 +93,7 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
       </div>
 
       {/* App picker */}
-      <div className="relative flex-1 max-w-xs">
+      <div className="relative w-56 flex-shrink-0">
         <div className="relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
@@ -153,23 +154,35 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
       </button>
 
       {/* Status */}
-      <div className={cn("flex items-center gap-1 text-xs whitespace-nowrap", starting ? 'text-yellow-500' : capturing ? 'text-green-500' : 'text-muted-foreground')}>
+      <div className={cn("flex items-center gap-1 text-xs whitespace-nowrap flex-shrink-0", starting ? 'text-yellow-500' : capturing ? 'text-green-500' : 'text-muted-foreground')}>
         {starting ? <Loader2 className="w-3 h-3 animate-spin" /> : capturing ? <Play className="w-3 h-3 fill-current" /> : <Circle className="w-3 h-3" />}
         <span>{starting ? t('capture.initializing') : capturing ? t('capture.listening') : t('capture.idle')}</span>
       </div>
 
       <div className="flex-1" />
 
-      {/* Counter + clear */}
-      <span className="text-xs text-muted-foreground">{t('requests.count', { n: requestCount })}</span>
-      <button onClick={onClear} className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title={t('capture.clear')}>
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
+      {/* Group: requests */}
+      <div className="flex items-center gap-0.5">
+        <span className="text-xs text-muted-foreground">{t('requests.count', { n: requestCount })}</span>
+        <button onClick={onClear} className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title={t('capture.clear')}>
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={onTogglePreserveLog}
+          title={preserveLog ? 'Preserve log: ON' : 'Preserve log: OFF'}
+          className={cn(
+            "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+            preserveLog ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground',
+          )}
+        >
+          Preserve
+        </button>
+      </div>
 
-      <div className="w-px h-5 bg-border" />
+      <div className="w-px h-5 bg-border flex-shrink-0" />
 
-      {/* Filter */}
-      <div className="flex items-center gap-1">
+      {/* Group: filter */}
+      <div className="flex items-center gap-1 flex-shrink-0">
         {QUICK_FILTERS.map(qf => {
           const tokens = filter.split(/\s+/);
           const active = tokens.includes(qf.query);
@@ -196,42 +209,42 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
         />
       </div>
 
-      {/* Rules */}
-      <div className="relative">
+      <div className="w-px h-5 bg-border flex-shrink-0" />
+
+      {/* Group: tools */}
+      <div className="flex items-center gap-0.5">
+        <div className="relative">
+          <button
+            ref={rulesBtnRef}
+            onClick={() => setRulesOpen(!rulesOpen)}
+            className={cn("relative p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground", rulesOpen && 'bg-accent text-foreground')}
+            title={t('override.title')}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {activeRuleCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-primary text-[9px] text-primary-foreground flex items-center justify-center px-0.5">
+                {activeRuleCount}
+              </span>
+            )}
+          </button>
+          <RulesPopover
+            open={rulesOpen}
+            onClose={() => setRulesOpen(false)}
+            onRulesChanged={onRulesChanged}
+            toast={toast}
+          />
+        </div>
         <button
-          ref={rulesBtnRef}
-          onClick={() => setRulesOpen(!rulesOpen)}
-          className={cn("relative p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground", rulesOpen && 'bg-accent text-foreground')}
-          title={t('override.title')}
+          onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
+          className="p-1.5 rounded hover:bg-accent transition-colors text-xs font-medium text-muted-foreground hover:text-foreground w-7 text-center"
+          title="Language"
         >
-          <Gavel className="w-4 h-4" />
-          {activeRuleCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-primary text-[9px] text-primary-foreground flex items-center justify-center px-0.5">
-              {activeRuleCount}
-            </span>
-          )}
+          {lang === 'en' ? '中' : 'EN'}
         </button>
-        <RulesPopover
-          open={rulesOpen}
-          onClose={() => setRulesOpen(false)}
-          onRulesChanged={onRulesChanged}
-          toast={toast}
-        />
+        <button onClick={onToggleTheme} className="p-1.5 rounded hover:bg-accent transition-colors" title={t('theme.toggle')}>
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
       </div>
-
-      {/* Language */}
-      <button
-        onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
-        className="p-1.5 rounded hover:bg-accent transition-colors text-xs font-medium text-muted-foreground hover:text-foreground w-7 text-center"
-        title="Language"
-      >
-        {lang === 'en' ? '中' : 'EN'}
-      </button>
-
-      {/* Theme */}
-      <button onClick={onToggleTheme} className="p-1.5 rounded hover:bg-accent transition-colors" title={t('theme.toggle')}>
-        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-      </button>
     </div>
   );
 }
