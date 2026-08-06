@@ -1,7 +1,7 @@
 #!/bin/bash
 # prism-hos-debugger — release build
 # Produces a standalone macOS .dmg with embedded backend.
-# Output: desktop/dist/Prism-*.dmg
+# Output: desktop-tauri/src-tauri/target/release/bundle/macos/Prism*.dmg
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
@@ -19,19 +19,19 @@ echo "==> 2/4 Building Python backend (PyInstaller)..."
 cd "$ROOT/packaging"
 bash build.sh
 
-# ── 3. Copy backend binary into Electron resources ───────────
-echo "==> 3/4 Preparing Electron resources..."
-mkdir -p "$ROOT/desktop/resources/prism-backend"
-cp "$ROOT/packaging/dist/prism" "$ROOT/desktop/resources/prism-backend/prism"
+# ── 3. Copy backend binary into Tauri resources ──────────────
+echo "==> 3/4 Preparing Tauri resources..."
+mkdir -p "$ROOT/desktop-tauri/src-tauri/binaries"
+cp "$ROOT/packaging/dist/prism" "$ROOT/desktop-tauri/src-tauri/binaries/prism"
 
-# ── 4. Build Electron .dmg ────────────────────────────────────
-echo "==> 4/4 Building Electron app..."
-cd "$ROOT/desktop"
-npx electron-builder --mac
+# ── 4. Build Tauri .dmg ──────────────────────────────────────
+echo "==> 4/4 Building Tauri app..."
+cd "$ROOT/desktop-tauri"
+npm run build
 
 # ── Done ──────────────────────────────────────────────────────
 echo ""
 echo "Release artifacts:"
-ls -lh "$ROOT/desktop/dist/"*.dmg "$ROOT/desktop/dist/"*.zip 2>/dev/null || echo "(check desktop/dist/)"
+find "$ROOT/desktop-tauri/src-tauri/target/release/bundle" -name "*.dmg" -exec ls -lh {} \; 2>/dev/null || echo "(check target/release/bundle/)"
 echo ""
 echo "Upload the .dmg to GitHub Releases."

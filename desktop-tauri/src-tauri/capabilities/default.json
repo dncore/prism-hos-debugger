@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nickolay/tauri-docs/refs/heads/v2/src/content/docs/_schema/tauri.conf.schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for Prism",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open"
+  ]
+}

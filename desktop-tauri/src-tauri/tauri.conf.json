@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nickolay/tauri-docs/refs/heads/v2/src/content/docs/_schema/config.schema.json",
+  "productName": "Prism",
+  "version": "0.1.0",
+  "identifier": "com.prism.debugger",
+  "build": {
+    "frontendDist": "../../webui/dist",
+    "devUrl": "http://localhost:8900",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "title": "Prism HTTP Debugger",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 900,
+        "minHeight": 500,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "dmg",
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "binaries/prism"
+    ],
+    "macOS": {
+      "entitlements": "entitlements.plist"
+    },
+    "createUpdaterArtifacts": false
+  }
+}

@@ -1,4 +1,4 @@
-const BASE = '';
+const BASE = typeof window !== 'undefined' && window.location.protocol !== 'http:' ? 'http://localhost:8900' : '';
 
 async function request(method: string, path: string, body?: unknown, timeoutMs = 30000) {
   const controller = new AbortController();
