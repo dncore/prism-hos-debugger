@@ -1,6 +1,6 @@
 {
   "name": "prism-desktop",
-  "version": "0.3.0",
+  "version": "0.1.0",
   "description": "Prism HTTP Debugger — Chrome DevTools-style HTTP debugging for HarmonyOS",
   "main": "main.js",
   "scripts": {
@@ -13,6 +13,9 @@
     "productName": "Prism",
     "directories": {
       "output": "dist"
+    },
+    "publish": {
+      "provider": "github"
     },
     "mac": {
       "category": "public.app-category.developer-tools",
@@ -37,6 +40,9 @@
       "node_modules/**/*",
       "!node_modules/.cache"
     ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
   },
   "devDependencies": {
     "electron": "^33.4.11",

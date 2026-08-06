@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
@@ -178,6 +179,13 @@ function createTray() {
       mainWindow.focus();
     }
   });
+}
+
+// ── App Lifecycle ─────────────────────────────────────────────
+
+// ── Auto-update ──────────────────────────────────────────────
+if (app.isPackaged) {
+  autoUpdater.checkForUpdatesAndNotify();
 }
 
 // ── App Lifecycle ─────────────────────────────────────────────
