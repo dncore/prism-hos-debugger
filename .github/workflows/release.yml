@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build-macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        run: |
+          pip install -e ".[dev]" --only-binary=:all:
+          pip install pyinstaller
+          cd webui && npm ci && npm run build && cd ..
+
+      - name: Build backend binary
+        run: |
+          cd packaging && mkdir -p dist build
+          pyinstaller --onefile --distpath dist --workpath build --clean --noconfirm \
+            --name prism --target-arch arm64 --console=false ../prism/cli.py
+
+      - name: Bundle into Electron
+        run: |
+          mkdir -p desktop/resources/prism-backend
+          cp packaging/dist/prism desktop/resources/prism-backend/prism
+          cd desktop && npm ci
+
+      - name: Package .dmg
+        env:
+          CSC_IDENTITY_AUTO_DISCOVER: false
+        run: cd desktop && npx electron-builder --mac
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/dist/*.dmg
+          generate_release_notes: true
