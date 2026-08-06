@@ -5,7 +5,7 @@
   "author": "prism developers",
 "repository": {
   "type": "git",
-  "url": "https://github.com/prism-hos-debugger/prism-hos-debugger"
+  "url": "https://github.com/dncore/prism-hos-debugger"
 },
 "main": "main.js",
   "scripts": {

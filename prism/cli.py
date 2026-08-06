@@ -136,7 +136,7 @@ def main() -> None:
 
 async def _cmd_list_devices(verbose: bool = False) -> None:
     """List all connected HarmonyOS devices."""
-    from .device_manager import DeviceManager
+    from prism.device_manager import DeviceManager
 
     mgr = DeviceManager()
     if not mgr.available:
@@ -223,7 +223,7 @@ async def _cmd_start(args) -> None:
     """Start the prism proxy and Web UI."""
     import uvicorn
 
-    from .db import init_db
+    from prism.db import init_db
     from pathlib import Path
     import webbrowser
 
@@ -280,7 +280,7 @@ async def _cmd_stop() -> None:
 
 async def _cmd_export_har(output_path: str) -> None:
     """Export captured requests as HAR format."""
-    from .db import init_db, list_requests
+    from prism.db import init_db, list_requests
     from pathlib import Path
     import json
 

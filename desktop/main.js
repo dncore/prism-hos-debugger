@@ -185,7 +185,7 @@ function createTray() {
 
 // ── Auto-update ──────────────────────────────────────────────
 if (app.isPackaged) {
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.checkForUpdatesAndNotify().catch(() => {});
 }
 
 // ── App Lifecycle ─────────────────────────────────────────────
