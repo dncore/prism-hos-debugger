@@ -92,10 +92,6 @@ webui_dist = _ROOT / "webui" / "dist"
 if webui_dist.exists():
     datas.append((str(webui_dist), "webui/dist"))
 
-# Protobuf definitions (for runtime type resolution)
-proto_dir = _ROOT / "prism" / "proto"
-for f in proto_dir.glob("*.proto"):
-    datas.append((str(f), f"prism/proto/{f.name}"))
 
 # ── macOS .app bundle ───────────────────────────────────────────
 

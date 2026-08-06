@@ -66,6 +66,12 @@ prism uses a **dual-backend** architecture. The primary backend communicates dir
 - Python 3.10+
 - [hdc](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V5/hdc-V5) (HarmonyOS Device Connector) from DevEco Studio
 - A HarmonyOS / OpenHarmony device connected via USB or network
+- **Proto source files:** Compiled stubs are included. To regenerate them from source, copy the `.proto` files from your DevEco Studio installation:
+  ```
+  # DevEco Studio profiler plugin JAR (ohos-profiler-*.jar)
+  # Extract: jar xf ohos-profiler-*.jar proto/
+  ```
+  Then place them in `prism/proto/` and rebuild with `protoc`.
 
 ### Install
 
@@ -213,7 +219,7 @@ All endpoints are documented at http://localhost:8900/docs (OpenAPI / Swagger).
 prism-hos-debugger/
 ├── prism/                  # Python backend
 │   ├── capture/            #   Dual-backend abstraction layer
-│   ├── proto/              #   Protobuf definitions (Apache 2.0, from DevEco Studio)
+│   ├── proto/              #   Compiled protobuf stubs (_pb2.py)
 │   ├── cli.py              #   CLI entry point
 │   ├── device_manager.py   #   hdc wrapper + hiprofilerd lifecycle
 │   ├── hiprofiler_client.py#   gRPC client for device daemon
@@ -379,7 +385,7 @@ prism export-har -o session.har  # 导出 HAR 文件
 prism-hos-debugger/
 ├── prism/                  # Python 后端
 │   ├── capture/            #   双后端抽象层
-│   ├── proto/              #   Protobuf 定义（源自 DevEco Studio，Apache 2.0 协议）
+│   ├── proto/              #   已编译的 protobuf stub（_pb2.py）
 │   ├── cli.py              #   命令行入口
 │   ├── device_manager.py   #   hdc 封装 + hiprofilerd 生命周期管理
 │   ├── hiprofiler_client.py#   设备守护进程 gRPC 客户端

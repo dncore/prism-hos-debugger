@@ -30,3 +30,4 @@ packaging/dist/
 desktop/dist/
 desktop/resources/
 docs/
+prism/proto/*.proto
