@@ -93,8 +93,14 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.command:
-        parser.print_help()
-        sys.exit(1)
+        # When launched without arguments (e.g. double-clicking .app bundle),
+        # default to 'start' so the Web UI opens automatically.
+        args.command = "start"
+        args.port = 8080
+        args.web_port = 8900
+        args.device = None
+        args.no_open = False
+        args.verbose = False
 
     _setup_logging(verbose=getattr(args, "verbose", False))
 

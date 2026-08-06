@@ -25,3 +25,7 @@ prism/proto/*_pb2_grpc.py
 # Frontend build
 webui/dist/
 webui/tsconfig.tsbuildinfo
+packaging/build/
+packaging/dist/
+desktop/dist/
+desktop/resources/

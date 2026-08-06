@@ -1,0 +1,45 @@
+{
+  "name": "prism-desktop",
+  "version": "0.3.0",
+  "description": "Prism HTTP Debugger — Chrome DevTools-style HTTP debugging for HarmonyOS",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac --arm64",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.prism.debugger",
+    "productName": "Prism",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.icns",
+      "target": ["dmg", "zip"],
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.plist",
+      "extendInfo": {
+        "LSUIElement": false
+      }
+    },
+    "extraResources": [
+      {
+        "from": "resources/prism-backend",
+        "to": "prism-backend"
+      }
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "assets/**/*",
+      "node_modules/**/*",
+      "!node_modules/.cache"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  }
+}

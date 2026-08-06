@@ -83,6 +83,32 @@ cd webui && npm install && npm run build && cd ..
 
 ### Launch
 
+**Option A: Electron Desktop App (recommended)**
+
+```bash
+cd desktop
+npm install
+npm start
+```
+
+A native macOS window opens with the full Web UI embedded. The app runs in the Dock with a tray icon — close the window to minimize to tray, Quit from the tray menu to stop the backend.
+
+To package as a standalone `.app`:
+
+```bash
+# First build the Python backend as a standalone binary
+cd packaging && ./build.sh
+
+# Copy the binary into the Electron app
+cp packaging/dist/prism desktop/resources/prism-backend/
+
+# Build the macOS .app bundle
+cd desktop && npm run build
+# Output: desktop/dist/Prism-*.dmg
+```
+
+**Option B: CLI (browser-based)**
+
 ```bash
 # List connected devices
 prism list-devices
@@ -272,6 +298,26 @@ cd webui && npm install && npm run build && cd ..
 ```
 
 ### 启动
+
+**方式 A：Electron 桌面应用（推荐）**
+
+```bash
+cd desktop
+npm install
+npm start
+```
+
+原生 macOS 窗口，Web UI 内嵌。Dock 图标 + 托盘图标 — 关闭窗口最小化到托盘，从托盘菜单退出停止后端。
+
+打包为独立 `.app`：
+
+```bash
+cd packaging && ./build.sh                      # 先构建 Python 后端
+cp packaging/dist/prism desktop/resources/prism-backend/
+cd desktop && npm run build                     # 输出 desktop/dist/Prism-*.dmg
+```
+
+**方式 B：CLI 命令行（浏览器模式）**
 
 ```bash
 prism list-devices          # 列出已连接设备
