@@ -143,6 +143,11 @@ export function RequestPanel({ requests, selectedId, onSelect }: Props) {
               )}>
                 {r.response_status || '---'}
               </span>
+              {r.intercepted && (
+                <span className={cn("text-[8px] px-1 py-0.5 rounded flex-shrink-0 font-medium", r.rule_id === 'resend' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400')}>
+                  {r.rule_id === 'resend' ? 'RESEND' : 'OVERRIDE'}
+                </span>
+              )}
               <span className="flex-1 truncate text-foreground/80" title={r.url}>{path}</span>
               {icon && (
                 <span className="text-[9px] text-muted-foreground flex-shrink-0 w-3 text-center" title={r.content_type}>
