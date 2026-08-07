@@ -2,10 +2,11 @@ use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, RunEvent, WindowEvent,
+    AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 
 const WEB_PORT: u16 = 8900;
@@ -14,9 +15,9 @@ struct BackendProcess(Arc<Mutex<Option<Child>>>);
 
 fn backend_command(app: &AppHandle) -> (String, Vec<String>) {
     let resource_dir = app.path().resource_dir().unwrap_or_default();
-    let bundled = resource_dir.join("prism");
+    let bundled = resource_dir.join("binaries").join("prism");
     if bundled.exists() {
-        return (bundled.to_string_lossy().to_string(), vec![]);
+        return (bundled.to_string_lossy().to_string(), vec!["start".to_string(), "--no-open".to_string()]);
     }
     (
         "python3".to_string(),
@@ -32,39 +33,47 @@ fn start_backend(app: &AppHandle) -> Result<Child, String> {
     let (cmd, args) = backend_command(app);
     println!("[prism] Starting backend: {} {}", cmd, args.join(" "));
 
+    let _ = Command::new("lsof").args(["-ti", &format!(":{}", WEB_PORT)])
+        .output().ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|pids| {
+            for pid in pids.lines() {
+                let _ = Command::new("kill").arg("-9").arg(pid).output();
+            }
+        });
+
     let mut child = Command::new(&cmd)
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        .env("PYTHONUNBUFFERED", "1")
         .spawn()
         .map_err(|e| format!("Failed to start backend: {}", e))?;
 
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
-    let (tx, rx) = std::sync::mpsc::channel();
-    let tx2 = tx.clone();
 
     thread::spawn(move || {
         for line in BufReader::new(stdout).lines() {
-            if let Ok(text) = line {
-                println!("[prism] {}", text);
-                if text.contains("Uvicorn running") { let _ = tx.send(true); }
-            }
+            if let Ok(text) = line { println!("[prism] {}", text); }
         }
     });
     thread::spawn(move || {
         for line in BufReader::new(stderr).lines() {
-            if let Ok(text) = line {
-                println!("[prism] {}", text);
-                if text.contains("Uvicorn running") { let _ = tx2.send(true); }
-            }
+            if let Ok(text) = line { println!("[prism] {}", text); }
         }
     });
 
-    match rx.recv_timeout(std::time::Duration::from_secs(15)) {
-        Ok(_) => Ok(child),
-        Err(_) => { let _ = child.kill(); Err("Backend startup timed out".to_string()) }
+    let addr = format!("127.0.0.1:{}", WEB_PORT);
+    for i in 0..120 {
+        thread::sleep(Duration::from_millis(500));
+        if std::net::TcpStream::connect(&addr).is_ok() {
+            println!("[prism] Backend ready after {}s", i / 2);
+            return Ok(child);
+        }
     }
+    let _ = child.kill();
+    Err(format!("Backend startup timed out (60s)"))
 }
 
 fn kill_backend(app: &AppHandle) {
@@ -76,7 +85,7 @@ fn kill_backend(app: &AppHandle) {
                 for _ in 0..50 {
                     match child.try_wait() {
                         Ok(Some(_)) => break,
-                        _ => thread::sleep(std::time::Duration::from_millis(100)),
+                        _ => thread::sleep(Duration::from_millis(100)),
                     }
                 }
             }
@@ -89,13 +98,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            let child = start_backend(&app.handle())?;
-            app.manage(BackendProcess(Arc::new(Mutex::new(Some(child)))));
-
-            // Show the window after backend is ready
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-            }
+            let handle = app.handle().clone();
 
             let open = MenuItemBuilder::with_id("open", "Open Prism").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
@@ -117,6 +120,25 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Spawn backend then create window when ready
+            thread::spawn(move || {
+                match start_backend(&handle) {
+                    Ok(child) => { handle.manage(BackendProcess(Arc::new(Mutex::new(Some(child))))); }
+                    Err(e) => eprintln!("[prism] {}", e),
+                }
+                // Backend ready — create window loading from localhost
+                let window = WebviewWindowBuilder::new(
+                    &handle, "main",
+                    WebviewUrl::External(format!("http://localhost:{}", WEB_PORT).parse().unwrap()),
+                )
+                .title("Prism HTTP Debugger")
+                .inner_size(1280.0, 860.0)
+                .center()
+                .build()
+                .unwrap();
+                let _ = window.show();
+            });
 
             Ok(())
         })
