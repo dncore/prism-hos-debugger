@@ -34,7 +34,6 @@ const TAB_KEYS: Tab[] = ['headers', 'payload', 'preview', 'response', 'timing', 
 export function DetailPanel({ request, toast, onRulesChanged }: Props) {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>('headers');
-  const [showResend, setShowResend] = useState(false);
 
   const labelMap: Record<Tab, string> = {
     headers: t('tab.headers'),
@@ -70,17 +69,10 @@ export function DetailPanel({ request, toast, onRulesChanged }: Props) {
         {request.intercepted && (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-medium">{t('detail.override_tag')}</span>
         )}
-        <button
-          onClick={() => setShowResend(!showResend)}
-          className={cn("text-[10px] px-1.5 py-0.5 rounded border transition-colors", showResend ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground')}
-        >
-          Resend
-        </button>
       </div>
       <div className="flex border-b border-border bg-secondary/30">
         {TAB_KEYS.map(k => <TabBtn key={k} label={labelMap[k]} active={tab === k} onClick={() => setTab(k)} />)}
       </div>
-      {showResend && <ResendPanel request={request} onClose={() => setShowResend(false)} toast={toast} />}
       <div className="flex-1 overflow-y-auto p-3">
         {tab === 'headers' && <HeadersView request={request} />}
         {tab === 'payload' && <PayloadView request={request} />}
@@ -497,6 +489,7 @@ function copyAsCurl(r: CapturedRequest) {
 function HeadersView({ request: r }: { request: CapturedRequest }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [showResend, setShowResend] = useState(false);
   const statusFirst = r.response_status ? String(r.response_status)[0] : '';
   const statusBg: Record<string,string> = {
     '2':'bg-emerald-500/15 text-emerald-400',
@@ -534,15 +527,23 @@ function HeadersView({ request: r }: { request: CapturedRequest }) {
         </tbody>
       </table>
 
-      {/* Copy as cURL */}
-      <div className="mt-3 mb-2">
+      {/* Copy as cURL + Resend */}
+      <div className="mt-3 mb-2 flex gap-2">
         <button
           onClick={() => { copyAsCurl(r); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
           className="px-2 py-1 rounded text-[11px] border border-border hover:bg-accent transition-colors"
         >
           {copied ? 'Copied!' : 'Copy as cURL'}
         </button>
+        <button
+          onClick={() => setShowResend(true)}
+          className="px-2 py-1 rounded text-[11px] border border-border hover:bg-accent transition-colors"
+        >
+          Resend
+        </button>
       </div>
+
+      {showResend && <ResendPanel key={r.id} request={r} onClose={() => setShowResend(false)} toast={undefined} />}
 
       <hr className="border-border my-3" />
 
@@ -639,6 +640,16 @@ function TimingView({ request: r }: { request: CapturedRequest }) {
 // ── Resend Panel ──────────────────────────────────────────────────
 
 function ResendPanel({ request, onClose, toast }: { request: CapturedRequest; onClose: () => void; toast?: (msg: string, type?: string) => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-[10vh]" onClick={onClose}>
+      <div className="border border-border rounded-lg w-[640px] max-h-[80vh] overflow-y-auto shadow-xl" style={{background:'hsl(var(--card))'}} onClick={e => e.stopPropagation()}>
+        <ResendForm request={request} onClose={onClose} toast={toast} />
+      </div>
+    </div>
+  );
+}
+
+function ResendForm({ request, onClose, toast }: { request: CapturedRequest; onClose: () => void; toast?: (msg: string, type?: string) => void }) {
   const [method, setMethod] = useState(request.method);
   const [url, setUrl] = useState(request.url);
   const [headers, setHeaders] = useState(() => {
@@ -680,10 +691,10 @@ function ResendPanel({ request, onClose, toast }: { request: CapturedRequest; on
   const queryParams: [string, string][] = qs ? qs.split('&').map(p => { const [k, ...v] = p.split('='); return [k, decodeURIComponent(v.join('='))]; }) : [];
 
   return (
-    <div className="p-3 border-b border-border bg-muted/20 space-y-3">
+    <div className="space-y-3 p-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold">Resend Request</span>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+        <span className="text-sm font-semibold">Resend Request</span>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</button>
       </div>
       <div className="flex gap-2">
         <select value={method} onChange={e => setMethod(e.target.value)} className="px-2 py-1 rounded text-xs border border-border bg-background">
