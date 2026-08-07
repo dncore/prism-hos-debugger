@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 import { api } from '@/lib/api';
+import { JsonTreeView } from './JsonTreeView';
 import type { CapturedRequest, OverrideRule } from '@/types';
 
 interface Props {
@@ -562,7 +563,9 @@ function PreviewView({ request: r }: { request: CapturedRequest }) {
   const b = r.response_body;
   if (!b) return <p className="text-muted-foreground text-xs">{t('detail.no_body')}</p>;
   if ((r.content_type || '').includes('json')) {
-    try { return <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md">{JSON.stringify(JSON.parse(b), null, 2)}</pre>; } catch {}
+    try {
+      return <JsonTreeView data={JSON.parse(b)} />;
+    } catch {}
   }
   return <pre className="font-mono text-xs whitespace-pre-wrap break-all bg-muted p-3 rounded-md max-h-[calc(100vh-250px)] overflow-y-auto">{b}</pre>;
 }
