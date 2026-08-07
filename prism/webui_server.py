@@ -262,11 +262,10 @@ async def api_list_rules():
 
 @app.post("/api/rules", response_model=OverrideRule)
 async def api_create_rule(rule: OverrideRule):
-    """Create a new override rule. The id field, if provided, is used; otherwise a UUID is generated."""
-    if not rule.id or rule.id == '':
+    """Create a new override rule. The id field, if empty, is auto-generated."""
+    if not rule.id:
         rule.id = str(uuid.uuid4())
     result = await create_rule(rule)
-    # Hot-reload rules into engine
     await _reload_rules()
     return result
 

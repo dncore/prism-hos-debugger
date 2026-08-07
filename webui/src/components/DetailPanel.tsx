@@ -162,6 +162,13 @@ function OverrideTab({
 
   return (
     <div className="space-y-4">
+      {/* How overrides work */}
+      <div className="text-xs text-muted-foreground bg-blue-500/10 border border-blue-500/20 rounded p-2">
+        <p className="font-medium mb-1">How overrides work</p>
+        <p>Override rules are applied to matching requests in <strong>real-time</strong>. Once a rule is saved and enabled, every new request matching its URL pattern will be intercepted and modified before reaching the server (or before the response reaches the app).</p>
+        <p className="mt-1 text-amber-400/80">⚠️ Real-time overrides require <strong>proxy mode</strong>. In gRPC mode, overrides are saved but not applied — switch to proxy mode in the capture settings.</p>
+      </div>
+
       {/* Quick Override */}
       <div>
         <p className="text-xs text-muted-foreground mb-2 font-semibold">{t('override.quick')}</p>

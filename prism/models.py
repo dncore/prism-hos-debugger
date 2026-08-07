@@ -107,7 +107,7 @@ class MatchType(str, Enum):
 
 class OverrideRule(BaseModel):
     """An override rule defining request matching and action."""
-    id: str  # unique ID
+    id: str = ""  # unique ID (auto-generated if empty)
     name: str = ""
     enabled: bool = True
 
