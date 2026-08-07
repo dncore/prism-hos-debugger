@@ -681,7 +681,7 @@ function ResendPanel({ request, onClose, toast }: { request: CapturedRequest; on
   const queryParams: [string, string][] = qs ? qs.split('&').map(p => { const [k, ...v] = p.split('='); return [k, decodeURIComponent(v.join('='))]; }) : [];
 
   return (
-    <div className="p-3 border-b border-border bg-muted/20 space-y-3">
+    <div className="p-4 border-b border-border bg-muted/30 space-y-3 min-h-[320px]">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold">Resend Request</span>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
