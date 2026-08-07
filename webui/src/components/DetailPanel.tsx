@@ -34,6 +34,7 @@ const TAB_KEYS: Tab[] = ['headers', 'payload', 'preview', 'response', 'timing', 
 export function DetailPanel({ request, toast, onRulesChanged }: Props) {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>('headers');
+  const [showResend, setShowResend] = useState(false);
 
   const labelMap: Record<Tab, string> = {
     headers: t('tab.headers'),
@@ -69,10 +70,17 @@ export function DetailPanel({ request, toast, onRulesChanged }: Props) {
         {request.intercepted && (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500 text-white font-medium">{t('detail.override_tag')}</span>
         )}
+        <button
+          onClick={() => setShowResend(!showResend)}
+          className={cn("text-[10px] px-1.5 py-0.5 rounded border transition-colors", showResend ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground')}
+        >
+          Resend
+        </button>
       </div>
       <div className="flex border-b border-border bg-secondary/30">
         {TAB_KEYS.map(k => <TabBtn key={k} label={labelMap[k]} active={tab === k} onClick={() => setTab(k)} />)}
       </div>
+      {showResend && <ResendPanel request={request} onClose={() => setShowResend(false)} toast={toast} />}
       <div className="flex-1 overflow-y-auto p-3">
         {tab === 'headers' && <HeadersView request={request} />}
         {tab === 'payload' && <PayloadView request={request} />}
@@ -624,6 +632,111 @@ function TimingView({ request: r }: { request: CapturedRequest }) {
       })}
       {!total && <p className="text-muted-foreground text-xs mt-2">{t('detail.no_timing')}</p>}
       <p className="text-muted-foreground text-[11px] mt-4">{r.timestamp} · {r.is_https ? 'HTTPS' : 'HTTP'} · {r.intercepted ? t('detail.override') : ''}</p>
+    </div>
+  );
+}
+
+// ── Resend Panel ──────────────────────────────────────────────────
+
+function ResendPanel({ request, onClose, toast }: { request: CapturedRequest; onClose: () => void; toast?: (msg: string, type?: string) => void }) {
+  const [method, setMethod] = useState(request.method);
+  const [url, setUrl] = useState(request.url);
+  const [headers, setHeaders] = useState(() => {
+    const h: Record<string, string> = { ...request.request_headers };
+    delete h.host;
+    delete h['content-length'];
+    return h;
+  });
+  const [body, setBody] = useState(request.request_body || '');
+  const [sending, setSending] = useState(false);
+  const [response, setResponse] = useState<CapturedRequest | null>(null);
+  const [error, setError] = useState('');
+
+  const addHeader = () => setHeaders(h => ({ ...h, '': '' }));
+  const updateHeader = (oldKey: string, newKey: string, value: string) => {
+    const h = { ...headers }; delete h[oldKey]; h[newKey] = value; setHeaders(h);
+  };
+  const removeHeader = (key: string) => {
+    const h = { ...headers }; delete h[key]; setHeaders(h);
+  };
+
+  const send = async () => {
+    setSending(true); setError(''); setResponse(null);
+    try {
+      const r = await fetch('http://localhost:8900/api/requests/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method, url, headers, body: body || null }),
+      });
+      if (!r.ok) { const e = await r.json().catch(() => ({ detail: r.statusText })); throw new Error(e.detail || r.statusText); }
+      const data = await r.json();
+      setResponse(data);
+      toast?.('Sent', 'success');
+    } catch (e: any) { setError(String(e.message || e)); }
+    finally { setSending(false); }
+  };
+
+  const [urlBase, qs] = url.split('?');
+  const queryParams: [string, string][] = qs ? qs.split('&').map(p => { const [k, ...v] = p.split('='); return [k, decodeURIComponent(v.join('='))]; }) : [];
+
+  return (
+    <div className="p-3 border-b border-border bg-muted/20 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold">Resend Request</span>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+      </div>
+      <div className="flex gap-2">
+        <select value={method} onChange={e => setMethod(e.target.value)} className="px-2 py-1 rounded text-xs border border-border bg-background">
+          {['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <input value={url} onChange={e => setUrl(e.target.value)} className="flex-1 px-2 py-1 rounded text-xs border border-border bg-background font-mono" />
+      </div>
+      {queryParams.length > 0 && <div>
+        <p className="text-[10px] text-muted-foreground mb-1">Query Parameters</p>
+        <div className="space-y-0.5">
+          {queryParams.map(([k, v], i) => (
+            <div key={i} className="flex gap-1">
+              <input value={k} readOnly className="w-1/3 px-2 py-0.5 rounded text-[10px] border border-border bg-muted/50 font-mono text-muted-foreground" />
+              <input value={v} onChange={e => {
+                const p = [...queryParams]; p[i][1] = e.target.value;
+                const nqs = p.filter(([,val]) => val).map(([key, val]) => `${key}=${encodeURIComponent(val)}`).join('&');
+                setUrl(urlBase + (nqs ? '?' + nqs : ''));
+              }} className="flex-1 px-2 py-0.5 rounded text-[10px] border border-border bg-background font-mono" />
+            </div>
+          ))}
+        </div>
+      </div>}
+      <div>
+        <div className="flex items-center justify-between mb-1"><p className="text-[10px] text-muted-foreground">Headers</p><button onClick={addHeader} className="text-[10px] text-primary hover:underline">+ Add</button></div>
+        <div className="space-y-0.5 max-h-32 overflow-y-auto">
+          {Object.entries(headers).map(([k, v]) => (
+            <div key={k} className="flex gap-1">
+              <input value={k} onChange={e => updateHeader(k, e.target.value, v)} className="w-1/3 px-2 py-0.5 rounded text-[10px] border border-border bg-background font-mono" placeholder="Name" />
+              <input value={v} onChange={e => updateHeader(k, k, e.target.value)} className="flex-1 px-2 py-0.5 rounded text-[10px] border border-border bg-background font-mono" placeholder="Value" />
+              <button onClick={() => removeHeader(k)} className="text-muted-foreground hover:text-red-400 text-[10px] px-1">✕</button>
+            </div>
+          ))}
+        </div>
+      </div>
+      {method !== 'GET' && method !== 'HEAD' && <div>
+        <p className="text-[10px] text-muted-foreground mb-1">Body</p>
+        <textarea value={body} onChange={e => setBody(e.target.value)} rows={4} className="w-full px-2 py-1 rounded text-xs border border-border bg-background font-mono resize-y" placeholder="Request body..." />
+      </div>}
+      <div className="flex items-center gap-2">
+        <button onClick={send} disabled={sending || !url} className="px-3 py-1 rounded text-xs bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50">{sending ? 'Sending...' : 'Send'}</button>
+        <button onClick={onClose} className="px-3 py-1 rounded text-xs border border-border hover:bg-accent">Cancel</button>
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      {response && <div className="border border-border rounded p-2 bg-background">
+        <p className="text-xs font-medium mb-1">
+          <span className={cn(response.response_status && response.response_status >= 400 ? 'text-red-400' : 'text-green-400')}>{response.response_status}</span>
+          <span className="text-muted-foreground"> · {response.total_duration_ms?.toFixed(0)}ms · {response.response_body_size} bytes</span>
+        </p>
+        <p className="text-[10px] text-muted-foreground mb-1">Response:</p>
+        <pre className="text-[10px] font-mono whitespace-pre-wrap break-all bg-muted p-2 rounded max-h-40 overflow-y-auto">
+          {(() => { const b = response.response_body; if (!b) return '(empty)'; if ((response.content_type||'').includes('json')) { try { return JSON.stringify(JSON.parse(b), null, 2); } catch {} } return b?.substring(0, 5000); })()}
+        </pre>
+      </div>}
     </div>
   );
 }

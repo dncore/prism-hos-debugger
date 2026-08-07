@@ -456,6 +456,70 @@ async def index():
     return HTMLResponse("<h1>prism Web UI not found</h1>", status_code=404)
 
 
+@app.post("/api/requests/resend")
+async def api_resend_request(data: dict):
+    """Resend an HTTP request with modified parameters.
+
+    Body: { method, url, headers: {k:v}, body: str|null }
+    Returns the response as a captured request, stored in DB and broadcast via SSE.
+    """
+    import httpx, time, uuid
+    from datetime import datetime, timezone
+
+    method = data.get("method", "GET")
+    url = data.get("url", "")
+    headers = data.get("headers", {}) or {}
+    body = data.get("body") or None
+
+    if not url:
+        raise HTTPException(400, "URL is required")
+
+    t0 = time.time()
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        resp = await client.request(method, url, headers=headers, content=body)
+    elapsed_ms = (time.time() - t0) * 1000
+
+    # Build CapturedRequest from response
+    res_headers = dict(resp.headers)
+    content_type = res_headers.get("content-type", "")
+    res_body = resp.text if len(resp.text) < 500_000 else resp.text[:500_000]
+
+    capture = CapturedRequest(
+        id=str(uuid.uuid4()),
+        url=str(resp.url),
+        method=HttpMethod(method.upper()),
+        scheme="https" if str(resp.url).startswith("https") else "http",
+        request_headers={k: v for k, v in headers.items() if isinstance(v, str)},
+        request_body=body,
+        request_body_size=len(body.encode()) if body else 0,
+        response_status=resp.status_code,
+        response_headers=res_headers,
+        response_body=res_body,
+        response_body_size=len(res_body.encode()) if res_body else 0,
+        timestamp=datetime.now(timezone.utc),
+        total_duration_ms=round(elapsed_ms, 2),
+        is_https=str(resp.url).startswith("https"),
+        intercepted=True,
+        rule_id="resend",
+        content_type=content_type,
+    )
+
+    # Store in DB and broadcast
+    try:
+        await insert_request(capture)
+    except Exception:
+        logger.exception("Failed to persist resent request")
+
+    sse_data = capture.model_dump(mode="json")
+    for q in _sse_queues:
+        try:
+            q.put_nowait(sse_data)
+        except asyncio.QueueFull:
+            pass
+
+    return capture
+
+
 @app.post("/api/debug/reset-profiler")
 async def api_debug_reset_profiler():
     """Force-restart hiprofilerd and reconnect. Use when session is active but no data flows."""
