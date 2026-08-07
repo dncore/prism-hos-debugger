@@ -30,4 +30,5 @@ packaging/dist/
 desktop/dist/
 desktop/resources/
 docs/
+.playwright-mcp/
 prism/proto/*.proto
