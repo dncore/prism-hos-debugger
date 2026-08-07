@@ -69,7 +69,7 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
       onRulesChanged();
       toast(t('override.deleted'), 'info');
     } catch (e: any) {
-      toast(e.message, 'error');
+      toast(String(e.message || e), 'error');
     }
   };
 
@@ -79,7 +79,7 @@ export function RulesPopover({ open, onClose, onRulesChanged, toast }: Props) {
       refresh();
       onRulesChanged();
     } catch (e: any) {
-      toast(e.message, 'error');
+      toast(String(e.message || e), 'error');
     }
   };
 
@@ -216,7 +216,7 @@ function RulesEditorInline({
       else await api.createRule(d);
       onSave();
     } catch (e: any) {
-      toast(e.message, 'error');
+      toast(String(e.message || e), 'error');
     } finally {
       setSaving(false);
     }

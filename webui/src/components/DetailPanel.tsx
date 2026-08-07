@@ -141,16 +141,16 @@ function OverrideTab({
   const otherRules = rules.filter((r) => !matchingRules.includes(r));
 
   const toggleRule = async (id: string) => {
-    try { await api.toggleRule(id); refresh(); onRulesChanged?.(); } catch (e: any) { msg(e.message, 'error'); }
+    try { await api.toggleRule(id); refresh(); onRulesChanged?.(); } catch (e: any) { msg(String(e.message || e), 'error'); }
   };
 
   const deleteRule = async (id: string) => {
-    try { await api.deleteRule(id); refresh(); onRulesChanged?.(); msg(t('override.deleted'), 'info'); } catch (e: any) { msg(e.message, 'error'); }
+    try { await api.deleteRule(id); refresh(); onRulesChanged?.(); msg(t('override.deleted'), 'info'); } catch (e: any) { msg(String(e.message || e), 'error'); }
   };
 
   const done = () => { setEditingId(null); setNewType(null); refresh(); onRulesChanged?.(); };
 
-  const derivedPattern = request.url.replace(/\?.*$/, '');
+  const derivedPattern = request.url;
 
   const quickLabels: Record<string, string> = {
     block: t('override.block'),
@@ -339,7 +339,7 @@ function RuleEditorInline({
       else await api.createRule(d);
       onSave();
     } catch (e: any) {
-      toast(e.message, 'error');
+      toast(String(e.message || e), 'error');
     } finally {
       setSaving(false);
     }
