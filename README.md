@@ -127,11 +127,11 @@ prism export-har -o session.har
 
 Open http://localhost:8900, select a device, pick a target app, and click — HTTP requests appear in real time.
 
-![Main overview](screenshots/main-overview.png)
+[![Main overview](screenshots/main-overview.png)](screenshots/main-overview.png)
 
-![Request detail — Headers](screenshots/detail-headers.png)
+[![Request detail — Headers](screenshots/detail-headers.png)](screenshots/detail-headers.png)
 
-![Request detail — Preview](screenshots/detail-preview.png)
+[![Request detail — Preview](screenshots/detail-preview.png)](screenshots/detail-preview.png)
 
 > ⚠️ **CRITICAL: App Must Be Profilable**
 >

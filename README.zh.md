@@ -78,11 +78,11 @@ prism export-har -o session.har  # 导出 HAR 文件
 
 打开 http://localhost:8900，选择设备 → 选择目标应用 → 点击开始，HTTP 请求实时显示。
 
-![主界面概览](screenshots/main-overview.png)
+[![主界面概览](screenshots/main-overview.png)](screenshots/main-overview.png)
 
-![请求详情 — Headers](screenshots/detail-headers.png)
+[![请求详情 — Headers](screenshots/detail-headers.png)](screenshots/detail-headers.png)
 
-![请求详情 — Preview](screenshots/detail-preview.png)
+[![请求详情 — Preview](screenshots/detail-preview.png)](screenshots/detail-preview.png)
 
 > ⚠️ **关键：App 必须可分析（Profilable）**
 >
