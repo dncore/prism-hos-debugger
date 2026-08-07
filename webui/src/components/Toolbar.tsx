@@ -17,10 +17,11 @@ interface Props {
   theme: string; onToggleTheme: () => void;
   activeRuleCount: number; onRulesChanged: () => void;
   preserveLog: boolean; onTogglePreserveLog: () => void;
+  captureMode: 'grpc' | 'proxy'; onToggleCaptureMode: () => void;
   toast: (msg: string, type?: string) => void;
 }
 
-export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, onLoadApps, filterSystemApps, onToggleFilterSystem, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme, activeRuleCount, onRulesChanged, preserveLog, onTogglePreserveLog, toast }: Props) {
+export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, onSelectApp, onLoadApps, filterSystemApps, onToggleFilterSystem, capturing, starting, requestCount, onClear, filter, onFilterChange, theme, onToggleTheme, activeRuleCount, onRulesChanged, preserveLog, onTogglePreserveLog, captureMode, onToggleCaptureMode, toast }: Props) {
   const { t, lang, setLang } = useI18n();
   const [devOpen, setDevOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
@@ -176,6 +177,16 @@ export function Toolbar({ device, devices, onSelectDevice, apps, loadingApps, on
           )}
         >
           Preserve
+        </button>
+        <button
+          onClick={onToggleCaptureMode}
+          title={captureMode === 'grpc' ? 'Switch to proxy mode (with overrides)' : 'Switch to gRPC mode (no CA cert needed)'}
+          className={cn(
+            "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+            captureMode === 'proxy' ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground',
+          )}
+        >
+          {captureMode === 'grpc' ? 'gRPC' : 'Proxy'}
         </button>
       </div>
 

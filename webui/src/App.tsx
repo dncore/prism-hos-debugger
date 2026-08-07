@@ -17,6 +17,9 @@ function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [apps, setApps] = useState<AppProcess[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
+  const [captureMode, setCaptureMode] = useState<'grpc' | 'proxy'>(() =>
+    (localStorage.getItem('prism-capture-mode') as 'grpc' | 'proxy') || 'grpc'
+  );
   const [capturing, setCapturing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [requests, setRequests] = useState<CapturedRequest[]>([]);
@@ -121,7 +124,7 @@ function App() {
     try {
       const status = await api.captureStatus();
       if (status.running) await api.captureStop();
-      await api.captureStart(pid, 'grpc');
+      await api.captureStart(pid, captureMode);
       setCapturing(true);
       lastPidRef.current = pid;
       if (!preserveLog) { setRequests([]); setSelectedId(null); await api.clearRequests(); }
@@ -195,6 +198,14 @@ function App() {
     });
   }, []);
 
+  const toggleCaptureMode = useCallback(() => {
+    setCaptureMode(prev => {
+      const next = prev === 'grpc' ? 'proxy' : 'grpc';
+      localStorage.setItem('prism-capture-mode', next);
+      return next;
+    });
+  }, []);
+
   useEffect(() => { refreshRuleCount(); }, [refreshRuleCount]);
 
   const filterTokens = useMemo(() => parseFilterQuery(filter), [filter]);
@@ -220,6 +231,8 @@ function App() {
         onRulesChanged={refreshRuleCount}
         preserveLog={preserveLog}
         onTogglePreserveLog={togglePreserveLog}
+        captureMode={captureMode}
+        onToggleCaptureMode={toggleCaptureMode}
         toast={toast}
       />
       <ResizableSplit storageKey="prism-split-ratio"
