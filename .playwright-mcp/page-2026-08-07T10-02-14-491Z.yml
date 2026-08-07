@@ -1,0 +1,95 @@
+- generic [ref=f6e3]:
+  - generic [ref=f6e4]:
+    - button "HarmonyOS Device (ABC123456)" [disabled] [ref=f6e9]
+    - textbox "Select target app..." [ref=f6e16]
+    - button "Showing user apps only (click to show all)" [ref=f6e17]
+    - button "Refresh app list" [ref=f6e23]
+    - generic [ref=f6e29]: Listening
+    - generic [ref=f6e33]:
+      - generic [ref=f6e34]: 8 requests
+      - button "Clear" [ref=f6e35]
+      - button "Preserve" [ref=f6e39]
+    - generic [ref=f6e41]:
+      - button "XHR" [ref=f6e42]
+      - button "JS" [ref=f6e43]
+      - button "CSS" [ref=f6e44]
+      - button "Img" [ref=f6e45]
+      - button "Font" [ref=f6e46]
+      - textbox "method:GET status:4xx type:json…" [ref=f6e47]
+    - generic [ref=f6e49]:
+      - button "Override Rules" [ref=f6e51]
+      - button "中" [ref=f6e53]
+      - button "Toggle theme" [ref=f6e54]
+  - generic [ref=f6e57]:
+    - generic [ref=f6e59]:
+      - generic [ref=f6e60]:
+        - generic [ref=f6e61]: Name
+        - generic [ref=f6e62]:
+          - button "Name" [ref=f6e63]
+          - button "Time" [ref=f6e64]
+          - button "Waterfall" [ref=f6e67]
+      - generic [ref=f6e68]:
+        - generic [ref=f6e69] [cursor=pointer]:
+          - generic [ref=f6e70]: GET
+          - generic [ref=f6e71]: "200"
+          - generic "https://api.example.com/v2/users/me" [ref=f6e72]: /v2/users/me
+          - generic "application/json" [ref=f6e73]: ⬆
+          - generic [ref=f6e74]: 80B
+          - generic [ref=f6e75]: 210ms
+        - generic [ref=f6e78] [cursor=pointer]:
+          - generic [ref=f6e79]: GET
+          - generic [ref=f6e80]: "200"
+          - generic "https://api.example.com/v2/items?category=electronics&page=1" [ref=f6e81]: /v2/items?category=electronics&page=1
+          - generic "application/json" [ref=f6e82]: ⬆
+          - generic [ref=f6e83]: 180B
+          - generic [ref=f6e84]: 185ms
+        - generic [ref=f6e87] [cursor=pointer]:
+          - generic [ref=f6e88]: POST
+          - generic [ref=f6e89]: "201"
+          - generic "https://api.example.com/v2/orders" [ref=f6e90]: /v2/orders
+          - generic "application/json" [ref=f6e91]: ⬆
+          - generic [ref=f6e92]: 65B
+          - generic [ref=f6e93]: 520ms
+        - generic [ref=f6e96] [cursor=pointer]:
+          - generic [ref=f6e97]: GET
+          - generic [ref=f6e98]: "304"
+          - generic "https://api.example.com/v2/config" [ref=f6e99]: /v2/config
+          - generic [ref=f6e100]: 42ms
+        - generic [ref=f6e103] [cursor=pointer]:
+          - generic [ref=f6e104]: GET
+          - generic [ref=f6e105]: "200"
+          - generic "https://cdn.example.com/static/app.js" [ref=f6e106]: /static/app.js
+          - generic "application/javascript" [ref=f6e107]: JS
+          - generic [ref=f6e108]: 47.1kB
+          - generic [ref=f6e109]: 320ms
+        - generic [ref=f6e112] [cursor=pointer]:
+          - generic [ref=f6e113]: POST
+          - generic [ref=f6e114]: "200"
+          - generic "https://api.example.com/v2/users/me" [ref=f6e115]: /v2/users/me
+          - generic "application/json" [ref=f6e116]: ⬆
+          - generic [ref=f6e117]: 60B
+          - generic [ref=f6e118]: 195ms
+        - generic [ref=f6e121] [cursor=pointer]:
+          - generic [ref=f6e122]: POST
+          - generic [ref=f6e123]: "200"
+          - generic [ref=f6e124]: RESEND
+          - generic "https://api.example.com/v2/users/me" [ref=f6e125]: /v2/users/me
+          - generic "application/json" [ref=f6e126]: ⬆
+          - generic [ref=f6e127]: 58B
+          - generic [ref=f6e128]: 188ms
+        - generic [ref=f6e131] [cursor=pointer]:
+          - generic [ref=f6e132]: GET
+          - generic [ref=f6e133]: "404"
+          - generic "https://api.example.com/v2/analytics/monthly" [ref=f6e134]: /v2/analytics/monthly
+          - generic "application/json" [ref=f6e135]: ⬆
+          - generic [ref=f6e136]: 53B
+          - generic [ref=f6e137]: 165ms
+    - generic [ref=f6e143]:
+      - generic [ref=f6e144]:
+        - button "Headers" [ref=f6e145] [cursor=pointer]
+        - button "Payload" [ref=f6e146] [cursor=pointer]
+        - button "Preview" [ref=f6e147] [cursor=pointer]
+        - button "Response" [ref=f6e148] [cursor=pointer]
+        - button "Timing" [ref=f6e149] [cursor=pointer]
+        - button "Override" [ref=f6e150] [cursor=pointer]
+      - generic [ref=f6e151]: Select a request
