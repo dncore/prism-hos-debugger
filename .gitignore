@@ -29,5 +29,6 @@ packaging/build/
 packaging/dist/
 desktop/dist/
 desktop/resources/
-docs/
+docs/*
+!docs/screenshots/
 prism/proto/*.proto
