@@ -640,16 +640,6 @@ function TimingView({ request: r }: { request: CapturedRequest }) {
 // ── Resend Panel ──────────────────────────────────────────────────
 
 function ResendPanel({ request, onClose, toast }: { request: CapturedRequest; onClose: () => void; toast?: (msg: string, type?: string) => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-[10vh]" onClick={onClose}>
-      <div className="border border-border rounded-lg w-[640px] max-h-[80vh] overflow-y-auto shadow-xl" style={{background:'hsl(var(--card))'}} onClick={e => e.stopPropagation()}>
-        <ResendForm request={request} onClose={onClose} toast={toast} />
-      </div>
-    </div>
-  );
-}
-
-function ResendForm({ request, onClose, toast }: { request: CapturedRequest; onClose: () => void; toast?: (msg: string, type?: string) => void }) {
   const [method, setMethod] = useState(request.method);
   const [url, setUrl] = useState(request.url);
   const [headers, setHeaders] = useState(() => {
@@ -691,10 +681,10 @@ function ResendForm({ request, onClose, toast }: { request: CapturedRequest; onC
   const queryParams: [string, string][] = qs ? qs.split('&').map(p => { const [k, ...v] = p.split('='); return [k, decodeURIComponent(v.join('='))]; }) : [];
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="p-3 border-b border-border bg-muted/20 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold">Resend Request</span>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</button>
+        <span className="text-xs font-semibold">Resend Request</span>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
       </div>
       <div className="flex gap-2">
         <select value={method} onChange={e => setMethod(e.target.value)} className="px-2 py-1 rounded text-xs border border-border bg-background">
